@@ -7,7 +7,7 @@ import { GetPublicBikesQuery } from './get-public-bikes.query';
 export class GetPublicBikesHandler implements IQueryHandler<GetPublicBikesQuery, Bike[]> {
   constructor(private readonly bikesService: BikesService) {}
 
-  execute(): Promise<Bike[]> {
-    return this.bikesService.findAll();
+  execute(query: GetPublicBikesQuery): Promise<Bike[]> {
+    return this.bikesService.findAll(query.brands);
   }
 }

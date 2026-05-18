@@ -41,6 +41,8 @@ Feature specs are ordered by creation date.
 | 8 | 2026-05-17 19:40 | [Multi Image Upload](multi-image-upload.md) | implemented |
 | 9 | 2026-05-18 09:34 | [Customer Listing Button Position Adjust](customer-listing-button-position-adjust.md) | implemented |
 | 10 | 2026-05-18 11:36 | [Backend CQRS Apply](backend-cqrs-apply.md) | implemented |
+| 11 | 2026-05-18 12:16 | [Refactor TypeORM](refactor-typeorm.md) | implemented |
+| 12 | 2026-05-18 14:05 | [Bike Category](bike-category.md) | implemented |
 
 ## Spec Status
 

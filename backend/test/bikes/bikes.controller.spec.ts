@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { readFile, unlink } from 'fs/promises';
 import { JwtAuthGuard } from '../../src/auth/jwt-auth.guard';
+import { BikeBrand } from '../../src/bikes/bike-brand.enum';
 import { Bike } from '../../src/bikes/bike.entity';
 import { BikesController } from '../../src/bikes/bikes.controller';
 import { CreateBikeCommand, UpdateBikeCommand, UpdateBikeSoldCommand } from '../../src/bikes/commands';
@@ -49,8 +50,16 @@ describe('BikesController', () => {
     const bikes = [{ id: 'bike-1' }] as Bike[];
     queryBus.execute.mockResolvedValue(bikes);
 
-    await expect(controller.findAll()).resolves.toBe(bikes);
+    await expect(controller.findAll({})).resolves.toBe(bikes);
     expect(queryBus.execute).toHaveBeenCalledWith(new GetPublicBikesQuery());
+  });
+
+  it('returns bike listings filtered by brands', async () => {
+    const bikes = [{ id: 'bike-1', brand: BikeBrand.Honda }] as Bike[];
+    queryBus.execute.mockResolvedValue(bikes);
+
+    await expect(controller.findAll({ brand: [BikeBrand.Honda, BikeBrand.Yamaha] })).resolves.toBe(bikes);
+    expect(queryBus.execute).toHaveBeenCalledWith(new GetPublicBikesQuery([BikeBrand.Honda, BikeBrand.Yamaha]));
   });
 
   it('returns all bike listings for admin', async () => {

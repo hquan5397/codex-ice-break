@@ -7,6 +7,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
@@ -28,6 +29,7 @@ import {
   UpdateBikeSoldDto,
 } from './commands';
 import { GetAdminBikesQuery, GetBikeQuery, GetPublicBikesQuery } from './queries';
+import { GetPublicBikesDto } from './queries/get-public-bikes';
 import { UploadCleanupInterceptor } from './upload-cleanup.interceptor';
 
 const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
@@ -146,8 +148,8 @@ export class BikesController {
   ) {}
 
   @Get()
-  findAll() {
-    return this.queryBus.execute(new GetPublicBikesQuery());
+  findAll(@Query() getPublicBikesDto: GetPublicBikesDto) {
+    return this.queryBus.execute(new GetPublicBikesQuery(getPublicBikesDto.brand));
   }
 
   @Get('admin')

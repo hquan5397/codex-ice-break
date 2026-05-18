@@ -1,4 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { FindOperator } from 'typeorm';
+import { BikeBrand } from '../../src/bikes/bike-brand.enum';
 import { Bike } from '../../src/bikes/bike.entity';
 import { BikesService } from '../../src/bikes/bikes.service';
 
@@ -86,6 +88,23 @@ describe('BikesService', () => {
     });
   });
 
+  it('filters public listings by selected brands and excludes sold bikes', async () => {
+    const bikes = [{ id: 'bike-1', brand: BikeBrand.Honda }] as Bike[];
+    repository.find.mockResolvedValue(bikes);
+
+    await expect(service.findAll([BikeBrand.Honda, BikeBrand.Yamaha])).resolves.toBe(bikes);
+
+    expect(repository.find).toHaveBeenCalledWith({
+      where: {
+        brand: expect.any(FindOperator),
+        sold: false,
+      },
+      order: {
+        createdAt: 'DESC',
+      },
+    });
+  });
+
   it('returns all listings for admin with selling bikes first', async () => {
     const bikes = [{ id: 'bike-1' }, { id: 'bike-2', sold: true }] as Bike[];
     repository.find.mockResolvedValue(bikes);
@@ -143,7 +162,7 @@ describe('BikesService', () => {
       id: 'bike-1',
       title: 'Old title',
       price: '68000000.00',
-      brand: 'Honda',
+      brand: BikeBrand.Honda,
       imageUrl: 'http://localhost:3000/uploads/old.webp',
       imageUrls: ['http://localhost:3000/uploads/old.webp'],
       sold: false,
@@ -155,14 +174,14 @@ describe('BikesService', () => {
       service.update('bike-1', {
         title: 'Honda SH 150i',
         price: 72000000,
-        brand: 'Honda',
+        brand: BikeBrand.Honda,
         sold: true,
       }),
     ).resolves.toEqual({
       id: 'bike-1',
       title: 'Honda SH 150i',
       price: '72000000.00',
-      brand: 'Honda',
+      brand: BikeBrand.Honda,
       imageUrl: 'http://localhost:3000/uploads/old.webp',
       imageUrls: ['http://localhost:3000/uploads/old.webp'],
       sold: true,
@@ -173,7 +192,7 @@ describe('BikesService', () => {
       id: 'bike-1',
       title: 'Honda SH 150i',
       price: '72000000.00',
-      brand: 'Honda',
+      brand: BikeBrand.Honda,
       imageUrl: 'http://localhost:3000/uploads/old.webp',
       imageUrls: ['http://localhost:3000/uploads/old.webp'],
       sold: true,
@@ -258,7 +277,7 @@ describe('BikesService', () => {
       id: 'bike-1',
       title: 'Honda SH',
       price: '68000000.00',
-      brand: 'Honda',
+      brand: BikeBrand.Honda,
       model: 'SH',
       year: 2022,
       mileage: 12000,
