@@ -1,0 +1,83 @@
+# Motorbike Store
+
+Full-stack motorbike listing app with:
+
+- NestJS + TypeScript API
+- TypeORM + PostgreSQL
+- React + Vite frontend
+- Docker Compose for Postgres, backend, and frontend
+
+## Spec-Driven Design
+
+This project uses spec-driven design. Feature behavior and acceptance criteria live in `specs/`.
+
+- Start with `specs/template.md` for new features.
+- Keep backend and frontend changes aligned with the relevant spec.
+- Current implemented feature spec: `specs/manage-bike-listings.md`.
+
+## Run With Docker
+
+```bash
+docker compose up --build
+```
+
+Open:
+
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:3000/api/bikes
+- Uploaded images: http://localhost:3000/uploads/<filename>
+
+## API
+
+`GET /api/bikes`
+
+Returns all bike listings.
+
+`GET /api/bikes/:id`
+
+Returns one bike listing.
+
+`POST /api/bikes`
+
+Creates a listing using `multipart/form-data`.
+
+Fields:
+
+- `title` required
+- `price` required
+- `image` required, JPEG/PNG/WebP, max 5 MB
+- `brand`
+- `model`
+- `year`
+- `mileage`
+- `description`
+
+## Local Development
+
+Backend:
+
+```bash
+cd backend
+cp .env.example .env
+npm install
+npm run start:dev
+```
+
+Frontend:
+
+```bash
+cd frontend
+cp .env.example .env
+npm install
+npm run dev
+```
+
+For local backend development, run Postgres yourself or start only the database:
+
+```bash
+docker compose up postgres
+```
+
+## Notes
+
+TypeORM `synchronize` is enabled for quick development. For production, switch to migrations before real customer data is stored.

@@ -1,0 +1,57 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: motorbike_store
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d motorbike_store"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      FRONTEND_ORIGIN: http://localhost:5173
+      API_PUBLIC_URL: http://localhost:3000
+      UPLOAD_DIR: uploads
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: admin123
+      JWT_SECRET: local-dev-change-me
+      JWT_EXPIRES_IN: 8h
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+      DATABASE_NAME: motorbike_store
+      TYPEORM_SYNC: "true"
+    ports:
+      - "3000:3000"
+    volumes:
+      - uploaded_images:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:3000/api
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  uploaded_images:

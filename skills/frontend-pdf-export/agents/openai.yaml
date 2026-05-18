@@ -1,0 +1,4 @@
+interface:
+  display_name: "Frontend PDF Export"
+  short_description: "Add browser-side PDF downloads to web apps"
+  default_prompt: "Use $frontend-pdf-export to add a PDF download action to a frontend listing page."
