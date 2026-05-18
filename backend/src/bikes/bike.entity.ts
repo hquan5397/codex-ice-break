@@ -6,6 +6,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { BikeBrand } from './bike-brand.enum';
 
 @Entity({ name: 'bikes' })
 export class Bike {
@@ -19,7 +20,7 @@ export class Bike {
   price: string;
 
   @Column({ type: 'varchar', length: 80, nullable: true })
-  brand?: string | null;
+  brand?: BikeBrand | null;
 
   @Column({ type: 'varchar', length: 80, nullable: true })
   model?: string | null;

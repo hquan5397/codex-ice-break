@@ -3,6 +3,7 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsBoolean,
+  IsEnum,
   IsInt,
   IsNotEmpty,
   IsNumber,
@@ -12,6 +13,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { BikeBrand } from '../../bike-brand.enum';
 
 function optionalNumber(value: unknown) {
   if (value === undefined) {
@@ -86,9 +88,8 @@ export class UpdateBikeDto {
 
   @IsOptional()
   @Transform(({ value }) => optionalText(value))
-  @IsString()
-  @MaxLength(80)
-  brand?: string | null;
+  @IsEnum(BikeBrand)
+  brand?: BikeBrand | null;
 
   @IsOptional()
   @Transform(({ value }) => optionalText(value))

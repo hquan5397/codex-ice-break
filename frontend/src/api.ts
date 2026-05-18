@@ -1,8 +1,22 @@
+export const bikeBrands = [
+  'Honda',
+  'Yamaha',
+  'Suzuki',
+  'Kawasaki',
+  'Benelli',
+  'Triumph',
+  'Harley-Davidson',
+  'GPX',
+  'Vespa',
+] as const;
+
+export type BikeBrand = (typeof bikeBrands)[number];
+
 export type Bike = {
   id: string;
   title: string;
   price: string;
-  brand?: string | null;
+  brand?: BikeBrand | null;
   model?: string | null;
   year?: number | null;
   mileage?: number | null;
@@ -44,8 +58,11 @@ async function readApiError(response: Response, fallback: string) {
   return text || fallback;
 }
 
-export async function getBikes(): Promise<Bike[]> {
-  const response = await fetch(`${API_URL}/bikes`);
+export async function getBikes(brands: BikeBrand[] = []): Promise<Bike[]> {
+  const params = new URLSearchParams();
+  brands.forEach((brand) => params.append('brand', brand));
+  const queryString = params.toString();
+  const response = await fetch(`${API_URL}/bikes${queryString ? `?${queryString}` : ''}`);
 
   if (!response.ok) {
     throw new Error('Could not load bike listings');

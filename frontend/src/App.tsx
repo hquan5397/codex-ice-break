@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import {
   Bike,
+  BikeBrand,
   createBike,
   getAdminBikes,
   getBike,
@@ -28,6 +29,7 @@ import {
   login as loginAdmin,
   updateBike,
   updateBikeSold,
+  bikeBrands,
 } from './api';
 import { downloadBikePdf } from './pdf';
 
@@ -335,6 +337,45 @@ function BikeCard({
   );
 }
 
+function BrandFilter({
+  selectedBrands,
+  onClear,
+  onToggleBrand,
+}: {
+  selectedBrands: BikeBrand[];
+  onClear: () => void;
+  onToggleBrand: (brand: BikeBrand) => void;
+}) {
+  const selectedSummary = selectedBrands.length === 0 ? 'All brands' : selectedBrands.join(', ');
+
+  return (
+    <details className="brand-filter">
+      <summary>
+        <span>Brand</span>
+        <strong>{selectedSummary}</strong>
+        <ChevronDown size={17} />
+      </summary>
+      <div className="brand-filter-menu">
+        <button className="brand-filter-clear" type="button" onClick={onClear}>
+          All brands
+        </button>
+        <div className="brand-option-grid">
+          {bikeBrands.map((brand) => (
+            <label className="brand-option" key={brand}>
+              <input
+                checked={selectedBrands.includes(brand)}
+                type="checkbox"
+                onChange={() => onToggleBrand(brand)}
+              />
+              {brand}
+            </label>
+          ))}
+        </div>
+      </div>
+    </details>
+  );
+}
+
 function BikeDetailPage({ id }: { id: string }) {
   const { bike, error, isLoading } = useBike(id);
   const detailImages = bike ? getBikeImages(bike) : [];
@@ -479,7 +520,15 @@ function BikeDetailPage({ id }: { id: string }) {
 }
 
 function CustomerPage() {
-  const { bikes, error, isLoading, loadBikes } = useBikes();
+  const [selectedBrands, setSelectedBrands] = useState<BikeBrand[]>([]);
+  const loadCustomerBikes = useMemo(() => () => getBikes(selectedBrands), [selectedBrands]);
+  const { bikes, error, isLoading, loadBikes } = useBikes(loadCustomerBikes);
+
+  function toggleBrand(brand: BikeBrand) {
+    setSelectedBrands((current) =>
+      current.includes(brand) ? current.filter((currentBrand) => currentBrand !== brand) : [...current, brand],
+    );
+  }
 
   return (
     <main className="customer-page">
@@ -519,9 +568,16 @@ function CustomerPage() {
             <p className="eyebrow">Available bikes</p>
             <h2>Current inventory</h2>
           </div>
-          <button className="icon-button" type="button" onClick={() => void loadBikes()} title="Refresh listings">
-            <RefreshCcw size={18} />
-          </button>
+          <div className="inventory-tools">
+            <BrandFilter
+              selectedBrands={selectedBrands}
+              onClear={() => setSelectedBrands([])}
+              onToggleBrand={toggleBrand}
+            />
+            <button className="icon-button" type="button" onClick={() => void loadBikes()} title="Refresh listings">
+              <RefreshCcw size={18} />
+            </button>
+          </div>
         </div>
 
         {isLoading ? (
@@ -978,7 +1034,17 @@ function AdminPage({
           <div className="field-grid">
             <label>
               Brand
-              <input value={form.brand} onChange={(event) => updateField('brand', event.target.value)} placeholder="Honda" />
+              <span className="select-control">
+                <select value={form.brand} onChange={(event) => updateField('brand', event.target.value)}>
+                  <option value="">Choose brand</option>
+                  {bikeBrands.map((brand) => (
+                    <option key={brand} value={brand}>
+                      {brand}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={17} />
+              </span>
             </label>
             <label>
               Model

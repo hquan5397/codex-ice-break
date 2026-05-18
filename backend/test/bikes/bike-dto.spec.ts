@@ -1,5 +1,6 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
+import { BikeBrand } from '../../src/bikes/bike-brand.enum';
 import { CreateBikeDto, UpdateBikeDto } from '../../src/bikes/commands';
 
 describe('Bike DTO validation', () => {
@@ -12,6 +13,34 @@ describe('Bike DTO validation', () => {
     const errors = await validate(dto);
 
     expect(errors.map((error) => error.property)).toEqual(expect.arrayContaining(['title', 'price']));
+  });
+
+  it('accepts supported bike brands for create and update requests', async () => {
+    const createDto = plainToInstance(CreateBikeDto, {
+      title: 'Honda SH',
+      price: '85000000',
+      brand: BikeBrand.Honda,
+    });
+    const updateDto = plainToInstance(UpdateBikeDto, {
+      brand: BikeBrand.Yamaha,
+    });
+
+    await expect(validate(createDto)).resolves.toHaveLength(0);
+    await expect(validate(updateDto)).resolves.toHaveLength(0);
+  });
+
+  it('rejects unsupported bike brands', async () => {
+    const createDto = plainToInstance(CreateBikeDto, {
+      title: 'Unknown bike',
+      price: '85000000',
+      brand: 'Unknown',
+    });
+    const updateDto = plainToInstance(UpdateBikeDto, {
+      brand: 'Unknown',
+    });
+
+    expect((await validate(createDto)).map((error) => error.property)).toContain('brand');
+    expect((await validate(updateDto)).map((error) => error.property)).toContain('brand');
   });
 
   it('rejects whitespace-only update titles', async () => {

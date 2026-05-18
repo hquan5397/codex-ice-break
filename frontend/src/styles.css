@@ -20,6 +20,7 @@ a {
 
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
@@ -136,29 +137,60 @@ label {
   font-size: 0.86rem;
   font-weight: 700;
   gap: 7px;
+  min-width: 0;
 }
 
 input,
+select,
 textarea {
   background: #fbfcfa;
   border: 1px solid #cfd7d1;
   border-radius: 6px;
   color: #17211d;
+  min-width: 0;
   outline: none;
   padding: 11px 12px;
+  width: 100%;
+}
+
+input,
+select {
+  min-height: 44px;
+}
+
+select {
+  appearance: none;
+  padding-right: 40px;
 }
 
 textarea {
   resize: vertical;
 }
 
+.select-control {
+  display: block;
+  position: relative;
+  width: 100%;
+}
+
+.select-control svg {
+  color: #5f6d66;
+  pointer-events: none;
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
 input:focus,
+select:focus,
 textarea:focus {
   border-color: #1f7a55;
   box-shadow: 0 0 0 3px rgba(31, 122, 85, 0.14);
 }
 
 .field-grid {
+  align-items: start;
   display: grid;
   gap: 12px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -433,6 +465,7 @@ textarea:focus {
 .inventory-heading {
   align-items: center;
   display: flex;
+  gap: 16px;
   justify-content: space-between;
   margin-bottom: 18px;
 }
@@ -445,6 +478,103 @@ textarea:focus {
 .customer-grid {
   grid-template-columns: repeat(auto-fill, minmax(255px, 1fr));
   margin-top: 0;
+}
+
+.inventory-tools {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.brand-filter {
+  position: relative;
+}
+
+.brand-filter summary {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #d6ddd8;
+  border-radius: 6px;
+  color: #17211d;
+  cursor: pointer;
+  display: grid;
+  gap: 2px 9px;
+  grid-template-columns: 1fr auto;
+  list-style: none;
+  min-height: 42px;
+  min-width: 210px;
+  padding: 7px 10px;
+}
+
+.brand-filter summary::-webkit-details-marker {
+  display: none;
+}
+
+.brand-filter summary span {
+  color: #66736b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.brand-filter summary strong {
+  font-size: 0.88rem;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.brand-filter summary svg {
+  grid-row: 1 / span 2;
+}
+
+.brand-filter-menu {
+  background: #ffffff;
+  border: 1px solid #d6ddd8;
+  border-radius: 8px;
+  box-shadow: 0 14px 36px rgba(31, 45, 38, 0.14);
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: min(320px, 84vw);
+  z-index: 3;
+}
+
+.brand-filter-clear {
+  background: #f4f6f2;
+  border: 1px solid #d6ddd8;
+  border-radius: 6px;
+  color: #17211d;
+  cursor: pointer;
+  font-weight: 800;
+  min-height: 36px;
+}
+
+.brand-option-grid {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.brand-option {
+  align-items: center;
+  background: #fbfcfa;
+  border: 1px solid #e3e8e1;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  gap: 8px;
+  min-height: 36px;
+  padding: 8px;
+}
+
+.brand-option input {
+  height: 16px;
+  width: 16px;
 }
 
 .customer-bike-card {
@@ -889,6 +1019,18 @@ textarea:focus {
   .inventory-heading {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .inventory-tools,
+  .brand-filter,
+  .brand-filter summary {
+    width: 100%;
+  }
+
+  .brand-filter-menu {
+    left: 0;
+    right: auto;
+    width: 100%;
   }
 
   .customer-hero h1 {

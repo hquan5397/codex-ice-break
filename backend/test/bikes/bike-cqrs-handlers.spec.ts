@@ -6,7 +6,9 @@ import {
   UpdateBikeSoldCommand,
   UpdateBikeSoldHandler,
 } from '../../src/bikes/commands';
+import { BikeBrand } from '../../src/bikes/bike-brand.enum';
 import { GetAdminBikesHandler, GetBikeHandler, GetBikeQuery, GetPublicBikesHandler } from '../../src/bikes/queries';
+import { GetPublicBikesQuery } from '../../src/bikes/queries/get-public-bikes';
 
 describe('Bike CQRS handlers', () => {
   let bikesService: {
@@ -75,8 +77,17 @@ describe('Bike CQRS handlers', () => {
     bikesService.findAll.mockResolvedValue(bikes);
     const handler = new GetPublicBikesHandler(bikesService as never);
 
-    await expect(handler.execute()).resolves.toBe(bikes);
-    expect(bikesService.findAll).toHaveBeenCalled();
+    await expect(handler.execute(new GetPublicBikesQuery())).resolves.toBe(bikes);
+    expect(bikesService.findAll).toHaveBeenCalledWith([]);
+  });
+
+  it('passes public listing brand filters to the service', async () => {
+    const bikes = [{ id: 'bike-1', brand: BikeBrand.Honda }];
+    bikesService.findAll.mockResolvedValue(bikes);
+    const handler = new GetPublicBikesHandler(bikesService as never);
+
+    await expect(handler.execute(new GetPublicBikesQuery([BikeBrand.Honda, BikeBrand.Yamaha]))).resolves.toBe(bikes);
+    expect(bikesService.findAll).toHaveBeenCalledWith([BikeBrand.Honda, BikeBrand.Yamaha]);
   });
 
   it('handles admin listing queries', async () => {

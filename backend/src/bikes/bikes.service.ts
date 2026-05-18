@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
+import { BikeBrand } from './bike-brand.enum';
 import { Bike } from './bike.entity';
 import { CreateBikeDto, UpdateBikeDto } from './commands';
 
@@ -27,9 +28,10 @@ export class BikesService {
     return this.bikesRepository.save(bike);
   }
 
-  findAll(): Promise<Bike[]> {
+  findAll(brands: BikeBrand[] = []): Promise<Bike[]> {
     return this.bikesRepository.find({
       where: {
+        ...(brands.length > 0 ? { brand: In(brands) } : {}),
         sold: false,
       },
       order: {
