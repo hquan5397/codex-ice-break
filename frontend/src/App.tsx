@@ -105,18 +105,31 @@ function useBikes(loadBikeListings = getBikes) {
   const [bikes, setBikes] = useState<Bike[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const latestRequestId = useRef(0);
 
   async function loadBikes() {
+    const requestId = latestRequestId.current + 1;
+    latestRequestId.current = requestId;
     setIsLoading(true);
     setError('');
 
     try {
       const bikeListings = await loadBikeListings();
+      if (requestId !== latestRequestId.current) {
+        return;
+      }
+
       setBikes(bikeListings);
     } catch (loadError) {
+      if (requestId !== latestRequestId.current) {
+        return;
+      }
+
       setError(loadError instanceof Error ? loadError.message : 'Could not load bikes');
     } finally {
-      setIsLoading(false);
+      if (requestId === latestRequestId.current) {
+        setIsLoading(false);
+      }
     }
   }
 
@@ -529,6 +542,7 @@ function CustomerPage() {
     [debouncedSearchTerm, selectedBrands],
   );
   const { bikes, error, isLoading, loadBikes } = useBikes(loadCustomerBikes);
+  const hasListings = bikes.length > 0;
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -604,22 +618,35 @@ function CustomerPage() {
           </div>
         </div>
 
-        {isLoading ? (
+        {isLoading && !hasListings ? (
           <div className="empty-state customer-state">
             <Loader2 className="spin" size={28} />
             Loading bikes for sale
           </div>
-        ) : error ? (
+        ) : error && !hasListings ? (
           <div className="empty-state customer-state error-state">
             Could not load listings. Please call {store.phone} for current bikes.
           </div>
-        ) : bikes.length === 0 ? (
+        ) : !hasListings ? (
           <div className="empty-state customer-state">No bikes are listed right now. Please call {store.phone} for availability.</div>
         ) : (
-          <div className="bike-grid customer-grid">
-            {bikes.map((bike) => (
-              <BikeCard bike={bike} key={bike.id} variant="customer" />
-            ))}
+          <div className={`listing-results ${isLoading ? 'is-refreshing' : ''}`}>
+            {error && (
+              <div className="listing-error" role="status">
+                Could not refresh listings. Please try again.
+              </div>
+            )}
+            <div className="bike-grid customer-grid">
+              {bikes.map((bike) => (
+                <BikeCard bike={bike} key={bike.id} variant="customer" />
+              ))}
+            </div>
+            {isLoading && (
+              <div className="listing-refreshing" role="status">
+                <Loader2 className="spin" size={18} />
+                Updating listings
+              </div>
+            )}
           </div>
         )}
       </section>

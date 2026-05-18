@@ -44,6 +44,7 @@ Feature specs are ordered by creation date.
 | 11 | 2026-05-18 12:16 | [Refactor TypeORM](refactor-typeorm.md) | implemented |
 | 12 | 2026-05-18 14:05 | [Bike Category](bike-category.md) | implemented |
 | 13 | 2026-05-18 20:55 | [Search Listing](search-listing.md) | implemented |
+| 14 | 2026-05-18 21:10 | [Refactor Loading Strategy In Listing Page](refactor-loading-strategy-in-listing-page.md) | implemented |
 
 ## Spec Status
 
