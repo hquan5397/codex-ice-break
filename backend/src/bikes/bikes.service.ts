@@ -1,9 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Bike } from './bike.entity';
-import { CreateBikeDto } from './dto/create-bike.dto';
-import { UpdateBikeDto } from './dto/update-bike.dto';
+import { CreateBikeDto, UpdateBikeDto } from './commands';
 
 @Injectable()
 export class BikesService {
@@ -13,6 +12,10 @@ export class BikesService {
   ) {}
 
   async create(createBikeDto: CreateBikeDto, imageUrls: string[]): Promise<Bike> {
+    if (imageUrls.length === 0) {
+      throw new BadRequestException('At least one bike image is required');
+    }
+
     const bike = this.bikesRepository.create({
       ...createBikeDto,
       price: createBikeDto.price.toFixed(2),
@@ -105,6 +108,10 @@ export class BikesService {
     }
 
     if (imageUrls) {
+      if (imageUrls.length === 0) {
+        throw new BadRequestException('A listing must contain at least one image');
+      }
+
       bike.imageUrls = imageUrls;
       bike.imageUrl = imageUrls[0];
     } else if (updateBikeDto.imageUrls) {

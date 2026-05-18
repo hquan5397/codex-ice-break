@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Bike } from '../../src/bikes/bike.entity';
 import { BikesService } from '../../src/bikes/bikes.service';
 
@@ -56,6 +56,18 @@ describe('BikesService', () => {
     });
     expect(repository.save).toHaveBeenCalledWith(createdBike);
     expect(result).toEqual({ id: 'bike-1', ...createdBike });
+  });
+
+  it('rejects creating a bike listing without images', async () => {
+    await expect(
+      service.create(
+        {
+          title: 'Yamaha R3',
+          price: 68000000,
+        },
+        [],
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('returns public listings newest first and excludes sold bikes', async () => {
@@ -197,6 +209,20 @@ describe('BikesService', () => {
       imageUrls: ['http://localhost:3000/uploads/new.webp', 'http://localhost:3000/uploads/new-side.webp'],
       sold: false,
     });
+  });
+
+  it('rejects updating a bike listing to an empty image list', async () => {
+    const bike = {
+      id: 'bike-1',
+      title: 'Honda SH',
+      price: '68000000.00',
+      imageUrl: 'http://localhost:3000/uploads/old.webp',
+      imageUrls: ['http://localhost:3000/uploads/old.webp'],
+      sold: false,
+    } as Bike;
+    repository.findOneBy.mockResolvedValue(bike);
+
+    await expect(service.update('bike-1', {}, [])).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('reorders existing listing images and updates the primary image', async () => {

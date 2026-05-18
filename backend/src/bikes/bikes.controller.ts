@@ -12,16 +12,22 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { readFile, unlink } from 'fs/promises';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { v4 as uuid } from 'uuid';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { CreateBikeDto } from './dto/create-bike.dto';
-import { UpdateBikeDto } from './dto/update-bike.dto';
-import { UpdateBikeSoldDto } from './dto/update-bike-sold.dto';
-import { BikesService } from './bikes.service';
+import {
+  CreateBikeCommand,
+  CreateBikeDto,
+  UpdateBikeCommand,
+  UpdateBikeDto,
+  UpdateBikeSoldCommand,
+  UpdateBikeSoldDto,
+} from './commands';
+import { GetAdminBikesQuery, GetBikeQuery, GetPublicBikesQuery } from './queries';
 import { UploadCleanupInterceptor } from './upload-cleanup.interceptor';
 
 const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
@@ -90,52 +96,75 @@ function imageUrlsFromFiles(images: Express.Multer.File[], apiBaseUrl: string) {
 
 function mergeOrderedImageUrls(updateBikeDto: UpdateBikeDto, uploadedImageUrls: string[]) {
   if (!updateBikeDto.imageOrder) {
-    return uploadedImageUrls.length > 0 ? [...(updateBikeDto.imageUrls || []), ...uploadedImageUrls] : undefined;
+    const mergedImageUrls = uploadedImageUrls.length > 0 ? [...(updateBikeDto.imageUrls || []), ...uploadedImageUrls] : undefined;
+
+    if (mergedImageUrls && mergedImageUrls.length > maxImagesPerListing) {
+      throw new BadRequestException(`A listing can contain up to ${maxImagesPerListing} images`);
+    }
+
+    return mergedImageUrls;
   }
 
-  return updateBikeDto.imageOrder
-    .map((imageToken) => {
-      if (imageToken.startsWith('existing:')) {
-        return imageToken.replace(/^existing:/, '');
+  const orderedImageUrls = updateBikeDto.imageOrder.map((imageToken) => {
+    if (imageToken.startsWith('existing:')) {
+      const existingImageUrl = imageToken.replace(/^existing:/, '');
+
+      if (!updateBikeDto.imageUrls?.includes(existingImageUrl)) {
+        throw new BadRequestException('Image order includes an unknown existing image');
       }
 
-      if (imageToken.startsWith('new:')) {
-        const uploadIndex = Number(imageToken.replace(/^new:/, ''));
-        return uploadedImageUrls[uploadIndex];
+      return existingImageUrl;
+    }
+
+    if (imageToken.startsWith('new:')) {
+      const uploadIndex = Number(imageToken.replace(/^new:/, ''));
+      const uploadedImageUrl = uploadedImageUrls[uploadIndex];
+
+      if (!Number.isInteger(uploadIndex) || !uploadedImageUrl) {
+        throw new BadRequestException('Image order includes an unknown uploaded image');
       }
 
-      return undefined;
-    })
-    .filter(Boolean) as string[];
+      return uploadedImageUrl;
+    }
+
+    throw new BadRequestException('Image order contains an invalid token');
+  });
+
+  if (orderedImageUrls.length === 0 || orderedImageUrls.length > maxImagesPerListing) {
+    throw new BadRequestException(`A listing must contain between 1 and ${maxImagesPerListing} images`);
+  }
+
+  return orderedImageUrls;
 }
 
 @Controller('bikes')
 export class BikesController {
   constructor(
-    private readonly bikesService: BikesService,
+    private readonly commandBus: CommandBus,
     private readonly configService: ConfigService,
+    private readonly queryBus: QueryBus,
   ) {}
 
   @Get()
   findAll() {
-    return this.bikesService.findAll();
+    return this.queryBus.execute(new GetPublicBikesQuery());
   }
 
   @Get('admin')
   @UseGuards(JwtAuthGuard)
   findAllForAdmin() {
-    return this.bikesService.findAllForAdmin();
+    return this.queryBus.execute(new GetAdminBikesQuery());
   }
 
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.bikesService.findOne(id);
+    return this.queryBus.execute(new GetBikeQuery(id));
   }
 
   @Patch(':id/sold')
   @UseGuards(JwtAuthGuard)
   updateSold(@Param('id', ParseUUIDPipe) id: string, @Body() updateBikeSoldDto: UpdateBikeSoldDto) {
-    return this.bikesService.updateSold(id, updateBikeSoldDto.sold);
+    return this.commandBus.execute(new UpdateBikeSoldCommand(id, updateBikeSoldDto.sold));
   }
 
   @Patch(':id')
@@ -154,7 +183,7 @@ export class BikesController {
     try {
       const uploadedImageUrls = imageUrlsFromFiles(images, apiBaseUrl);
       const orderedImageUrls = mergeOrderedImageUrls(updateBikeDto, uploadedImageUrls);
-      return await this.bikesService.update(id, updateBikeDto, orderedImageUrls);
+      return await this.commandBus.execute(new UpdateBikeCommand(id, updateBikeDto, orderedImageUrls));
     } catch (error) {
       await removeUploadedFiles(images);
       throw error;
@@ -173,7 +202,7 @@ export class BikesController {
 
     const apiBaseUrl = this.configService.get<string>('API_PUBLIC_URL', 'http://localhost:3000');
     try {
-      return await this.bikesService.create(createBikeDto, imageUrlsFromFiles(images, apiBaseUrl));
+      return await this.commandBus.execute(new CreateBikeCommand(createBikeDto, imageUrlsFromFiles(images, apiBaseUrl)));
     } catch (error) {
       await removeUploadedFiles(images);
       throw error;

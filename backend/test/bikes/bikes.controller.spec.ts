@@ -1,11 +1,13 @@
 import { BadRequestException } from '@nestjs/common';
 import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { ConfigService } from '@nestjs/config';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { readFile, unlink } from 'fs/promises';
 import { JwtAuthGuard } from '../../src/auth/jwt-auth.guard';
 import { Bike } from '../../src/bikes/bike.entity';
 import { BikesController } from '../../src/bikes/bikes.controller';
-import { BikesService } from '../../src/bikes/bikes.service';
+import { CreateBikeCommand, UpdateBikeCommand, UpdateBikeSoldCommand } from '../../src/bikes/commands';
+import { GetAdminBikesQuery, GetBikeQuery, GetPublicBikesQuery } from '../../src/bikes/queries';
 
 jest.mock('fs/promises', () => ({
   readFile: jest.fn(),
@@ -13,65 +15,64 @@ jest.mock('fs/promises', () => ({
 }));
 
 describe('BikesController', () => {
-  let bikesService: {
-    create: jest.Mock;
-    findAll: jest.Mock;
-    findAllForAdmin: jest.Mock;
-    findOne: jest.Mock;
-    update: jest.Mock;
-    updateSold: jest.Mock;
+  let commandBus: {
+    execute: jest.Mock;
   };
   let configService: {
     get: jest.Mock;
+  };
+  let queryBus: {
+    execute: jest.Mock;
   };
   let controller: BikesController;
 
   beforeEach(() => {
     jest.mocked(readFile).mockResolvedValue(Buffer.from('RIFFxxxxWEBPmore'));
     jest.mocked(unlink).mockResolvedValue(undefined);
-    bikesService = {
-      create: jest.fn(),
-      findAll: jest.fn(),
-      findAllForAdmin: jest.fn(),
-      findOne: jest.fn(),
-      update: jest.fn(),
-      updateSold: jest.fn(),
+    commandBus = {
+      execute: jest.fn(),
     };
     configService = {
       get: jest.fn((_key: string, defaultValue: string) => defaultValue),
     };
+    queryBus = {
+      execute: jest.fn(),
+    };
     controller = new BikesController(
-      bikesService as unknown as BikesService,
+      commandBus as unknown as CommandBus,
       configService as unknown as ConfigService,
+      queryBus as unknown as QueryBus,
     );
   });
 
   it('returns all bike listings', async () => {
     const bikes = [{ id: 'bike-1' }] as Bike[];
-    bikesService.findAll.mockResolvedValue(bikes);
+    queryBus.execute.mockResolvedValue(bikes);
 
     await expect(controller.findAll()).resolves.toBe(bikes);
+    expect(queryBus.execute).toHaveBeenCalledWith(new GetPublicBikesQuery());
   });
 
   it('returns all bike listings for admin', async () => {
     const bikes = [{ id: 'bike-1' }, { id: 'bike-2', sold: true }] as Bike[];
-    bikesService.findAllForAdmin.mockResolvedValue(bikes);
+    queryBus.execute.mockResolvedValue(bikes);
 
     await expect(controller.findAllForAdmin()).resolves.toBe(bikes);
+    expect(queryBus.execute).toHaveBeenCalledWith(new GetAdminBikesQuery());
   });
 
   it('returns one bike listing', async () => {
     const bike = { id: 'bike-1' } as Bike;
-    bikesService.findOne.mockResolvedValue(bike);
+    queryBus.execute.mockResolvedValue(bike);
 
     await expect(controller.findOne('bike-1')).resolves.toBe(bike);
-    expect(bikesService.findOne).toHaveBeenCalledWith('bike-1');
+    expect(queryBus.execute).toHaveBeenCalledWith(new GetBikeQuery('bike-1'));
   });
 
   it('creates a bike listing with the configured public image URL', async () => {
     const bike = { id: 'bike-1' } as Bike;
     configService.get.mockReturnValue('https://api.example.test');
-    bikesService.create.mockResolvedValue(bike);
+    commandBus.execute.mockResolvedValue(bike);
 
     const result = await controller.create(
       {
@@ -92,27 +93,29 @@ describe('BikesController', () => {
 
     expect(result).toBe(bike);
     expect(configService.get).toHaveBeenCalledWith('API_PUBLIC_URL', 'http://localhost:3000');
-    expect(bikesService.create).toHaveBeenCalledWith(
-      {
-        title: 'Honda SH',
-        price: 85000000,
-      },
-      ['https://api.example.test/uploads/bike.webp', 'https://api.example.test/uploads/bike-side.webp'],
+    expect(commandBus.execute).toHaveBeenCalledWith(
+      new CreateBikeCommand(
+        {
+          title: 'Honda SH',
+          price: 85000000,
+        },
+        ['https://api.example.test/uploads/bike.webp', 'https://api.example.test/uploads/bike-side.webp'],
+      ),
     );
   });
 
   it('updates sold status for a bike listing', async () => {
     const bike = { id: 'bike-1', sold: true } as Bike;
-    bikesService.updateSold.mockResolvedValue(bike);
+    commandBus.execute.mockResolvedValue(bike);
 
     await expect(controller.updateSold('bike-1', { sold: true })).resolves.toBe(bike);
 
-    expect(bikesService.updateSold).toHaveBeenCalledWith('bike-1', true);
+    expect(commandBus.execute).toHaveBeenCalledWith(new UpdateBikeSoldCommand('bike-1', true));
   });
 
   it('updates a bike listing without replacing the image', async () => {
     const bike = { id: 'bike-1', title: 'Honda SH 150i' } as Bike;
-    bikesService.update.mockResolvedValue(bike);
+    commandBus.execute.mockResolvedValue(bike);
 
     await expect(
       controller.update('bike-1', {
@@ -122,20 +125,22 @@ describe('BikesController', () => {
     ).resolves.toBe(bike);
 
     expect(configService.get).toHaveBeenCalledWith('API_PUBLIC_URL', 'http://localhost:3000');
-    expect(bikesService.update).toHaveBeenCalledWith(
-      'bike-1',
-      {
-        title: 'Honda SH 150i',
-        price: 72000000,
-      },
-      undefined,
+    expect(commandBus.execute).toHaveBeenCalledWith(
+      new UpdateBikeCommand(
+        'bike-1',
+        {
+          title: 'Honda SH 150i',
+          price: 72000000,
+        },
+        undefined,
+      ),
     );
   });
 
   it('updates a bike listing with a replacement image URL', async () => {
     const bike = { id: 'bike-1', imageUrl: 'https://api.example.test/uploads/new.webp' } as Bike;
     configService.get.mockReturnValue('https://api.example.test');
-    bikesService.update.mockResolvedValue(bike);
+    commandBus.execute.mockResolvedValue(bike);
 
     await expect(
       controller.update(
@@ -152,19 +157,21 @@ describe('BikesController', () => {
       ),
     ).resolves.toBe(bike);
 
-    expect(bikesService.update).toHaveBeenCalledWith(
-      'bike-1',
-      {
-        title: 'Honda SH 150i',
-      },
-      ['https://api.example.test/uploads/new.webp'],
+    expect(commandBus.execute).toHaveBeenCalledWith(
+      new UpdateBikeCommand(
+        'bike-1',
+        {
+          title: 'Honda SH 150i',
+        },
+        ['https://api.example.test/uploads/new.webp'],
+      ),
     );
   });
 
   it('preserves mixed existing and uploaded image order', async () => {
     const bike = { id: 'bike-1', imageUrl: 'https://api.example.test/uploads/new.webp' } as Bike;
     configService.get.mockReturnValue('https://api.example.test');
-    bikesService.update.mockResolvedValue(bike);
+    commandBus.execute.mockResolvedValue(bike);
 
     await expect(
       controller.update(
@@ -182,19 +189,78 @@ describe('BikesController', () => {
       ),
     ).resolves.toBe(bike);
 
-    expect(bikesService.update).toHaveBeenCalledWith(
-      'bike-1',
-      {
-        imageUrls: ['https://api.example.test/uploads/front.webp'],
-        imageOrder: ['new:0', 'existing:https://api.example.test/uploads/front.webp'],
-      },
-      ['https://api.example.test/uploads/new.webp', 'https://api.example.test/uploads/front.webp'],
+    expect(commandBus.execute).toHaveBeenCalledWith(
+      new UpdateBikeCommand(
+        'bike-1',
+        {
+          imageUrls: ['https://api.example.test/uploads/front.webp'],
+          imageOrder: ['new:0', 'existing:https://api.example.test/uploads/front.webp'],
+        },
+        ['https://api.example.test/uploads/new.webp', 'https://api.example.test/uploads/front.webp'],
+      ),
     );
+  });
+
+  it('rejects image order tokens for missing uploaded images', async () => {
+    configService.get.mockReturnValue('https://api.example.test');
+
+    await expect(
+      controller.update(
+        'bike-1',
+        {
+          imageOrder: ['new:99'],
+        },
+        [
+          {
+            filename: 'new.webp',
+            path: 'uploads/new.webp',
+          },
+        ] as Express.Multer.File[],
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(commandBus.execute).not.toHaveBeenCalled();
+    expect(unlink).toHaveBeenCalledWith('uploads/new.webp');
+  });
+
+  it('rejects image order tokens for unknown existing images', async () => {
+    await expect(
+      controller.update(
+        'bike-1',
+        {
+          imageUrls: ['https://api.example.test/uploads/front.webp'],
+          imageOrder: ['existing:https://api.example.test/uploads/other.webp'],
+        },
+        [],
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(commandBus.execute).not.toHaveBeenCalled();
+  });
+
+  it('rejects merged image updates with more than 8 images', async () => {
+    await expect(
+      controller.update(
+        'bike-1',
+        {
+          imageUrls: Array.from({ length: 8 }, (_value, index) => `https://api.example.test/uploads/${index}.webp`),
+        },
+        [
+          {
+            filename: 'new.webp',
+            path: 'uploads/new.webp',
+          },
+        ] as Express.Multer.File[],
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(commandBus.execute).not.toHaveBeenCalled();
+    expect(unlink).toHaveBeenCalledWith('uploads/new.webp');
   });
 
   it('reorders existing bike listing images without uploading files', async () => {
     const bike = { id: 'bike-1', imageUrl: 'https://api.example.test/uploads/side.webp' } as Bike;
-    bikesService.update.mockResolvedValue(bike);
+    commandBus.execute.mockResolvedValue(bike);
 
     await expect(
       controller.update(
@@ -206,12 +272,14 @@ describe('BikesController', () => {
       ),
     ).resolves.toBe(bike);
 
-    expect(bikesService.update).toHaveBeenCalledWith(
-      'bike-1',
-      {
-        imageUrls: ['https://api.example.test/uploads/side.webp', 'https://api.example.test/uploads/front.webp'],
-      },
-      undefined,
+    expect(commandBus.execute).toHaveBeenCalledWith(
+      new UpdateBikeCommand(
+        'bike-1',
+        {
+          imageUrls: ['https://api.example.test/uploads/side.webp', 'https://api.example.test/uploads/front.webp'],
+        },
+        undefined,
+      ),
     );
   });
 
@@ -239,11 +307,11 @@ describe('BikesController', () => {
 
     expect(unlink).toHaveBeenCalledWith('uploads/fake.webp');
     expect(unlink).toHaveBeenCalledWith('uploads/other.webp');
-    expect(bikesService.create).not.toHaveBeenCalled();
+    expect(commandBus.execute).not.toHaveBeenCalled();
   });
 
   it('removes uploaded create images when persistence fails', async () => {
-    bikesService.create.mockRejectedValue(new Error('database down'));
+    commandBus.execute.mockRejectedValue(new Error('database down'));
 
     await expect(
       controller.create(
@@ -264,7 +332,7 @@ describe('BikesController', () => {
   });
 
   it('removes uploaded update images when persistence fails', async () => {
-    bikesService.update.mockRejectedValue(new Error('missing listing'));
+    commandBus.execute.mockRejectedValue(new Error('missing listing'));
 
     await expect(
       controller.update(
