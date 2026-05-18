@@ -40,6 +40,7 @@ Feature specs are ordered by creation date.
 | 7 | 2026-05-17 18:56 | [Edit Listing](edit-listing.md) | implemented |
 | 8 | 2026-05-17 19:40 | [Multi Image Upload](multi-image-upload.md) | implemented |
 | 9 | 2026-05-18 09:34 | [Customer Listing Button Position Adjust](customer-listing-button-position-adjust.md) | implemented |
+| 10 | 2026-05-18 11:36 | [Backend CQRS Apply](backend-cqrs-apply.md) | implemented |
 
 ## Spec Status
 

@@ -1,7 +1,6 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { CreateBikeDto } from '../../src/bikes/dto/create-bike.dto';
-import { UpdateBikeDto } from '../../src/bikes/dto/update-bike.dto';
+import { CreateBikeDto, UpdateBikeDto } from '../../src/bikes/commands';
 
 describe('Bike DTO validation', () => {
   it('rejects whitespace-only create titles and empty create prices', async () => {
