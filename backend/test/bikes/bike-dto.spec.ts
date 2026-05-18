@@ -2,6 +2,7 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { BikeBrand } from '../../src/bikes/bike-brand.enum';
 import { CreateBikeDto, UpdateBikeDto } from '../../src/bikes/commands';
+import { GetPublicBikesDto } from '../../src/bikes/queries';
 
 describe('Bike DTO validation', () => {
   it('rejects whitespace-only create titles and empty create prices', async () => {
@@ -41,6 +42,38 @@ describe('Bike DTO validation', () => {
 
     expect((await validate(createDto)).map((error) => error.property)).toContain('brand');
     expect((await validate(updateDto)).map((error) => error.property)).toContain('brand');
+  });
+
+  it('trims valid public listing search terms', async () => {
+    const dto = plainToInstance(GetPublicBikesDto, {
+      search: '  honda sh  ',
+    });
+
+    const errors = await validate(dto);
+
+    expect(errors).toHaveLength(0);
+    expect(dto.search).toBe('honda sh');
+  });
+
+  it('treats blank public listing search terms as empty filters', async () => {
+    const dto = plainToInstance(GetPublicBikesDto, {
+      search: '   ',
+    });
+
+    const errors = await validate(dto);
+
+    expect(errors).toHaveLength(0);
+    expect(dto.search).toBeUndefined();
+  });
+
+  it('rejects overly long public listing search terms', async () => {
+    const dto = plainToInstance(GetPublicBikesDto, {
+      search: 'a'.repeat(121),
+    });
+
+    const errors = await validate(dto);
+
+    expect(errors.map((error) => error.property)).toContain('search');
   });
 
   it('rejects whitespace-only update titles', async () => {

@@ -36,6 +36,11 @@ export type LoginResponse = {
   expiresIn: string;
 };
 
+export type GetBikesParams = {
+  brands?: BikeBrand[];
+  search?: string;
+};
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 async function readApiError(response: Response, fallback: string) {
@@ -58,14 +63,18 @@ async function readApiError(response: Response, fallback: string) {
   return text || fallback;
 }
 
-export async function getBikes(brands: BikeBrand[] = []): Promise<Bike[]> {
+export async function getBikes({ brands = [], search = '' }: GetBikesParams = {}): Promise<Bike[]> {
   const params = new URLSearchParams();
   brands.forEach((brand) => params.append('brand', brand));
+  if (search.trim()) {
+    params.set('search', search.trim());
+  }
+
   const queryString = params.toString();
   const response = await fetch(`${API_URL}/bikes${queryString ? `?${queryString}` : ''}`);
 
   if (!response.ok) {
-    throw new Error('Could not load bike listings');
+    throw new Error(await readApiError(response, 'Could not load bike listings'));
   }
 
   return response.json();

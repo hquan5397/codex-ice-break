@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { ArrayMaxSize, IsArray, IsEnum, IsOptional } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
 import { BikeBrand, bikeBrands } from '../../bike-brand.enum';
 
 function optionalBrandList(value: unknown) {
@@ -18,4 +18,10 @@ export class GetPublicBikesDto {
   @ArrayMaxSize(bikeBrands.length)
   @IsEnum(BikeBrand, { each: true })
   brand?: BikeBrand[];
+
+  @IsOptional()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() || undefined : value))
+  @IsString()
+  @MaxLength(120)
+  search?: string;
 }

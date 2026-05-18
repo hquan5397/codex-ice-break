@@ -1,5 +1,8 @@
 import { BikeBrand } from '../../bike-brand.enum';
 
 export class GetPublicBikesQuery {
-  constructor(public readonly brands: BikeBrand[] = []) {}
+  constructor(
+    public readonly brands: BikeBrand[] = [],
+    public readonly search?: string,
+  ) {}
 }
