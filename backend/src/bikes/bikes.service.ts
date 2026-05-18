@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { Brackets, Repository } from 'typeorm';
 import { BikeBrand } from './bike-brand.enum';
 import { Bike } from './bike.entity';
 import { CreateBikeDto, UpdateBikeDto } from './commands';
@@ -28,16 +28,29 @@ export class BikesService {
     return this.bikesRepository.save(bike);
   }
 
-  findAll(brands: BikeBrand[] = []): Promise<Bike[]> {
-    return this.bikesRepository.find({
-      where: {
-        ...(brands.length > 0 ? { brand: In(brands) } : {}),
-        sold: false,
-      },
-      order: {
-        createdAt: 'DESC',
-      },
-    });
+  findAll(brands: BikeBrand[] = [], search?: string): Promise<Bike[]> {
+    const searchTerm = search?.trim();
+    const queryBuilder = this.bikesRepository
+      .createQueryBuilder('bike')
+      .where('bike.sold = :sold', { sold: false })
+      .orderBy('bike.createdAt', 'DESC');
+
+    if (brands.length > 0) {
+      queryBuilder.andWhere('bike.brand IN (:...brands)', { brands });
+    }
+
+    if (searchTerm) {
+      queryBuilder.andWhere(
+        new Brackets((searchQuery) => {
+          searchQuery
+            .where('LOWER(bike.title) LIKE LOWER(:search)', { search: `%${searchTerm}%` })
+            .orWhere('LOWER(bike.brand) LIKE LOWER(:search)', { search: `%${searchTerm}%` })
+            .orWhere('LOWER(bike.model) LIKE LOWER(:search)', { search: `%${searchTerm}%` });
+        }),
+      );
+    }
+
+    return queryBuilder.getMany();
   }
 
   findAllForAdmin(): Promise<Bike[]> {

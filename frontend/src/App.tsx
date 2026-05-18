@@ -13,6 +13,7 @@ import {
   Plus,
   RefreshCcw,
   Save,
+  Search as SearchIcon,
   Tag,
   ChevronDown,
   ChevronUp,
@@ -521,8 +522,21 @@ function BikeDetailPage({ id }: { id: string }) {
 
 function CustomerPage() {
   const [selectedBrands, setSelectedBrands] = useState<BikeBrand[]>([]);
-  const loadCustomerBikes = useMemo(() => () => getBikes(selectedBrands), [selectedBrands]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const loadCustomerBikes = useMemo(
+    () => () => getBikes({ brands: selectedBrands, search: debouncedSearchTerm }),
+    [debouncedSearchTerm, selectedBrands],
+  );
   const { bikes, error, isLoading, loadBikes } = useBikes(loadCustomerBikes);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim());
+    }, 300);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [searchTerm]);
 
   function toggleBrand(brand: BikeBrand) {
     setSelectedBrands((current) =>
@@ -569,6 +583,16 @@ function CustomerPage() {
             <h2>Current inventory</h2>
           </div>
           <div className="inventory-tools">
+            <label className="search-field">
+              <span className="sr-only">Search listings</span>
+              <SearchIcon size={18} />
+              <input
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Search title, brand, or model"
+                type="search"
+              />
+            </label>
             <BrandFilter
               selectedBrands={selectedBrands}
               onClear={() => setSelectedBrands([])}

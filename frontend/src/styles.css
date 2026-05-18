@@ -484,6 +484,52 @@ textarea:focus {
   align-items: center;
   display: flex;
   gap: 10px;
+  justify-content: flex-end;
+  max-width: 780px;
+  transform: translateX(-18px);
+}
+
+.search-field {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #d6ddd8;
+  border-radius: 6px;
+  color: #5f6d66;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: auto minmax(220px, 1fr);
+  min-height: 42px;
+  min-width: 300px;
+  padding: 0 10px;
+}
+
+.search-field:focus-within {
+  border-color: #1f7a55;
+  box-shadow: 0 0 0 3px rgba(31, 122, 85, 0.14);
+}
+
+.search-field input {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  min-height: 40px;
+  padding: 0;
+}
+
+.search-field input:focus {
+  box-shadow: none;
+}
+
+.sr-only {
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
 }
 
 .brand-filter {
@@ -1023,8 +1069,19 @@ textarea:focus {
 
   .inventory-tools,
   .brand-filter,
+  .search-field,
   .brand-filter summary {
+    transform: none;
     width: 100%;
+  }
+
+  .inventory-tools {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .search-field {
+    min-width: 0;
   }
 
   .brand-filter-menu {

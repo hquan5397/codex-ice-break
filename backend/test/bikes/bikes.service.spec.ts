@@ -1,18 +1,41 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { FindOperator } from 'typeorm';
+import { Brackets } from 'typeorm';
 import { BikeBrand } from '../../src/bikes/bike-brand.enum';
 import { Bike } from '../../src/bikes/bike.entity';
 import { BikesService } from '../../src/bikes/bikes.service';
 
+type MockBikeQueryBuilder = {
+  andWhere: jest.Mock;
+  getMany: jest.Mock;
+  orderBy: jest.Mock;
+  where: jest.Mock;
+};
+
 type MockBikeRepository = {
+  createQueryBuilder: jest.Mock;
   create: jest.Mock;
   save: jest.Mock;
   find: jest.Mock;
   findOneBy: jest.Mock;
 };
 
+function createMockQueryBuilder(): MockBikeQueryBuilder {
+  const queryBuilder = {
+    andWhere: jest.fn(),
+    getMany: jest.fn(),
+    orderBy: jest.fn(),
+    where: jest.fn(),
+  };
+
+  queryBuilder.where.mockReturnValue(queryBuilder);
+  queryBuilder.andWhere.mockReturnValue(queryBuilder);
+  queryBuilder.orderBy.mockReturnValue(queryBuilder);
+  return queryBuilder;
+}
+
 function createMockRepository(): MockBikeRepository {
   return {
+    createQueryBuilder: jest.fn(),
     create: jest.fn(),
     save: jest.fn(),
     find: jest.fn(),
@@ -22,10 +45,13 @@ function createMockRepository(): MockBikeRepository {
 
 describe('BikesService', () => {
   let repository: MockBikeRepository;
+  let queryBuilder: MockBikeQueryBuilder;
   let service: BikesService;
 
   beforeEach(() => {
+    queryBuilder = createMockQueryBuilder();
     repository = createMockRepository();
+    repository.createQueryBuilder.mockReturnValue(queryBuilder);
     service = new BikesService(repository as never);
   });
 
@@ -74,35 +100,69 @@ describe('BikesService', () => {
 
   it('returns public listings newest first and excludes sold bikes', async () => {
     const bikes = [{ id: 'bike-1' }] as Bike[];
-    repository.find.mockResolvedValue(bikes);
+    queryBuilder.getMany.mockResolvedValue(bikes);
 
     await expect(service.findAll()).resolves.toBe(bikes);
 
-    expect(repository.find).toHaveBeenCalledWith({
-      where: {
-        sold: false,
-      },
-      order: {
-        createdAt: 'DESC',
-      },
-    });
+    expect(repository.createQueryBuilder).toHaveBeenCalledWith('bike');
+    expect(queryBuilder.where).toHaveBeenCalledWith('bike.sold = :sold', { sold: false });
+    expect(queryBuilder.orderBy).toHaveBeenCalledWith('bike.createdAt', 'DESC');
+    expect(queryBuilder.andWhere).not.toHaveBeenCalled();
   });
 
   it('filters public listings by selected brands and excludes sold bikes', async () => {
     const bikes = [{ id: 'bike-1', brand: BikeBrand.Honda }] as Bike[];
-    repository.find.mockResolvedValue(bikes);
+    queryBuilder.getMany.mockResolvedValue(bikes);
 
     await expect(service.findAll([BikeBrand.Honda, BikeBrand.Yamaha])).resolves.toBe(bikes);
 
-    expect(repository.find).toHaveBeenCalledWith({
-      where: {
-        brand: expect.any(FindOperator),
-        sold: false,
-      },
-      order: {
-        createdAt: 'DESC',
-      },
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith('bike.brand IN (:...brands)', {
+      brands: [BikeBrand.Honda, BikeBrand.Yamaha],
     });
+  });
+
+  it('searches public listings by title, brand, or model', async () => {
+    const bikes = [{ id: 'bike-1', title: 'Honda SH' }] as Bike[];
+    const searchWhere = jest.fn().mockReturnThis();
+    const searchOrWhere = jest.fn().mockReturnThis();
+    queryBuilder.andWhere.mockImplementation((condition) => {
+      if (condition instanceof Brackets) {
+        condition.whereFactory({
+          where: searchWhere,
+          orWhere: searchOrWhere,
+        } as never);
+      }
+
+      return queryBuilder;
+    });
+    queryBuilder.getMany.mockResolvedValue(bikes);
+
+    await expect(service.findAll([], '  sh  ')).resolves.toBe(bikes);
+
+    expect(searchWhere).toHaveBeenCalledWith('LOWER(bike.title) LIKE LOWER(:search)', { search: '%sh%' });
+    expect(searchOrWhere).toHaveBeenCalledWith('LOWER(bike.brand) LIKE LOWER(:search)', { search: '%sh%' });
+    expect(searchOrWhere).toHaveBeenCalledWith('LOWER(bike.model) LIKE LOWER(:search)', { search: '%sh%' });
+  });
+
+  it('combines public listing search with selected brands', async () => {
+    const bikes = [{ id: 'bike-1', brand: BikeBrand.Honda, model: 'SH' }] as Bike[];
+    queryBuilder.getMany.mockResolvedValue(bikes);
+
+    await expect(service.findAll([BikeBrand.Honda, BikeBrand.Yamaha], 'sh')).resolves.toBe(bikes);
+
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith('bike.brand IN (:...brands)', {
+      brands: [BikeBrand.Honda, BikeBrand.Yamaha],
+    });
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith(expect.any(Brackets));
+  });
+
+  it('treats blank public listing search as no search filter', async () => {
+    const bikes = [{ id: 'bike-1' }] as Bike[];
+    queryBuilder.getMany.mockResolvedValue(bikes);
+
+    await expect(service.findAll([], '   ')).resolves.toBe(bikes);
+
+    expect(queryBuilder.andWhere).not.toHaveBeenCalled();
   });
 
   it('returns all listings for admin with selling bikes first', async () => {
