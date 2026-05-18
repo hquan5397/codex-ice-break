@@ -21,6 +21,8 @@ This project uses spec-driven design. Feature behavior and acceptance criteria l
 docker compose up --build
 ```
 
+The backend container runs pending database migrations before it starts the API.
+
 Open:
 
 - Frontend: http://localhost:5173
@@ -78,6 +80,20 @@ For local backend development, run Postgres yourself or start only the database:
 docker compose up postgres
 ```
 
+Run migrations against the local Compose database:
+
+```bash
+cd backend
+npm run migration:run
+```
+
+Create a new migration after changing an entity:
+
+```bash
+cd backend
+npm run migration:generate -- src/migrations/NameOfChange
+```
+
 ## Notes
 
-TypeORM `synchronize` is enabled for quick development. For production, switch to migrations before real customer data is stored.
+TypeORM `synchronize` is disabled by default. Keep schema changes in `backend/src/migrations` and run migrations before relying on new database fields.

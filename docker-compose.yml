@@ -33,7 +33,8 @@ services:
       DATABASE_USER: postgres
       DATABASE_PASSWORD: postgres
       DATABASE_NAME: motorbike_store
-      TYPEORM_SYNC: "true"
+      TYPEORM_SYNC: "false"
+    command: sh -c "npm run migration:run:prod && npm run start:prod"
     ports:
       - "3000:3000"
     volumes:

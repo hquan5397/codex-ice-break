@@ -34,7 +34,7 @@ import { validateProductionConfig } from './config/validate-production-config';
           password: configService.get<string>('DATABASE_PASSWORD', 'postgres'),
           database: configService.get<string>('DATABASE_NAME', 'motorbike_store'),
           autoLoadEntities: true,
-          synchronize: configService.get<string>('TYPEORM_SYNC', 'true') === 'true',
+          synchronize: configService.get<string>('TYPEORM_SYNC', 'false') === 'true',
         };
       },
     }),
