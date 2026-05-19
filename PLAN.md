@@ -1,29 +1,24 @@
-# Consolidate Agent Rules Plan
+# Fix GitHub PR Governance Files Plan
 
 ## Summary
 
-Replace the separate backend and frontend `AGENTS.md` files with one root-level `AGENTS.md` that covers the whole project.
+Fix the GitHub PR governance files so the plan gate workflow and CODEOWNERS rules work with GitHub’s expected paths and syntax.
 
 ## Proposed Changes
 
-- Create root `AGENTS.md`.
-- Merge the important rules from:
-  - `backend/AGENTS.md`
-  - `frontend/AGENTS.md`
-- Keep one shared rule set for:
-  - spec-driven design
-  - required plan-first workflow
-  - one review/inspection agent for feature implementation
-  - backend stack, conventions, API, database, verification
-  - frontend stack, conventions, UI, API, verification
-  - Docker expectations
-  - README updates when setup, commands, workflows, APIs, Docker, specs, or user-facing behavior changes
-- Delete:
-  - `backend/AGENTS.md`
-  - `frontend/AGENTS.md`
-- Update `README.md` to mention root `AGENTS.md` as the project guidance file.
+- Update `.github/workflows/plan-gate.yml`:
+  - check for `.github/pull_request_template.md`
+  - update the error/success messages to use the same path
+- Update `.github/CODEOWNERS`:
+  - replace invalid default owner line `- @hquan5397`
+  - use `* @hquan5397` as the default owner rule
+  - keep existing ownership for security, workflows, and infra paths
 
 ## Verification
 
-- No build or test required because this is documentation/rules only.
-- Confirm only root `AGENTS.md` remains in project source folders.
+- No local build/test required because this is GitHub metadata only.
+- Confirm files are present:
+  - `.github/pull_request_template.md`
+  - `.github/workflows/plan-gate.yml`
+  - `.github/CODEOWNERS`
+- Future PRs should pass the plan gate path check and request the expected owner review.
