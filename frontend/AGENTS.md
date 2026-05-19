@@ -14,6 +14,7 @@ This frontend is a React app for browsing and adding motorbike listings.
 ## Multi-Agent Workflow
 
 - For future implementations that touch both backend and frontend, use parallel agents to inspect backend and frontend before coding.
+- For feature implementation work, spawn one additional review/inspection agent before or during implementation and fold its findings into the final changes before verification.
 - Keep the frontend inspection focused on UI behavior, typed API calls, state flow, styling, and build impact.
 - Coordinate with the backend findings before making cross-stack changes.
 

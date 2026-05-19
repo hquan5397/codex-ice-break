@@ -120,6 +120,106 @@ h1 {
   padding: 20px;
 }
 
+.dashboard-summary {
+  background: #ffffff;
+  border: 1px solid #dfe4dc;
+  border-radius: 8px;
+  box-shadow: 0 14px 40px rgba(31, 45, 38, 0.08);
+  display: grid;
+  gap: 16px;
+  margin: 0 auto 24px;
+  max-width: 1240px;
+  padding: 20px;
+}
+
+.dashboard-summary-header {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.date-range-controls {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.date-range-controls label {
+  min-width: 155px;
+}
+
+.summary-stat-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.summary-stat {
+  background: #f7f8f5;
+  border: 1px solid #e3e8e1;
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.summary-stat span {
+  color: #66736b;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.summary-stat strong {
+  color: #17211d;
+  font-size: 1.45rem;
+}
+
+.revenue-stat strong {
+  color: #d92f1c;
+  font-size: 1.18rem;
+}
+
+.newest-listings-summary h3 {
+  font-size: 0.95rem;
+  margin-bottom: 8px;
+}
+
+.newest-listings-summary ul {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.newest-listings-summary li {
+  align-items: center;
+  border-top: 1px solid #edf0ec;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  padding-top: 8px;
+}
+
+.newest-listings-summary span {
+  font-weight: 800;
+}
+
+.newest-listings-summary small,
+.newest-listings-summary p {
+  color: #66736b;
+}
+
+.dashboard-message {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+  justify-self: start;
+}
+
 .panel-heading {
   align-items: center;
   display: flex;
@@ -1057,6 +1157,16 @@ textarea:focus {
     grid-template-columns: 1fr;
   }
 
+  .dashboard-summary-header,
+  .date-range-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .summary-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .customer-nav,
   .customer-hero,
   .customer-inventory {
@@ -1142,6 +1252,10 @@ textarea:focus {
   }
 
   .detail-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-stat-grid {
     grid-template-columns: 1fr;
   }
 

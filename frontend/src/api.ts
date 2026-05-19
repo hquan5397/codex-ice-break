@@ -36,6 +36,26 @@ export type LoginResponse = {
   expiresIn: string;
 };
 
+export type AdminDashboardSummary = {
+  totalListings: number;
+  sellingListings: number;
+  soldListings: number;
+  soldListingsInRange: number;
+  revenueInRange: string;
+  newestListings: Array<{
+    id: string;
+    title: string;
+    brand?: BikeBrand | null;
+    model?: string | null;
+    createdAt: string;
+  }>;
+};
+
+export type DashboardDateRange = {
+  from?: string;
+  to?: string;
+};
+
 export type GetBikesParams = {
   brands?: BikeBrand[];
   search?: string;
@@ -99,6 +119,30 @@ export async function getAdminBikes(token: string): Promise<Bike[]> {
 
   if (!response.ok) {
     throw new Error('Could not load admin bike listings');
+  }
+
+  return response.json();
+}
+
+export async function getAdminDashboardSummary(token: string, dateRange: DashboardDateRange = {}): Promise<AdminDashboardSummary> {
+  const params = new URLSearchParams();
+  if (dateRange.from) {
+    params.set('from', dateRange.from);
+  }
+
+  if (dateRange.to) {
+    params.set('to', dateRange.to);
+  }
+
+  const queryString = params.toString();
+  const response = await fetch(`${API_URL}/admin/dashboard-summary${queryString ? `?${queryString}` : ''}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(await readApiError(response, 'Could not load dashboard summary'));
   }
 
   return response.json();

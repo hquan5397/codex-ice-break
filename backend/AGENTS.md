@@ -14,6 +14,7 @@ This backend is a NestJS API for motorbike listings.
 ## Multi-Agent Workflow
 
 - For future implementations that touch both backend and frontend, use parallel agents to inspect backend and frontend before coding.
+- For feature implementation work, spawn one additional review/inspection agent before or during implementation and fold its findings into the final changes before verification.
 - Keep the backend inspection focused on API contracts, DTOs, persistence behavior, auth, and tests.
 - Coordinate with the frontend findings before making cross-stack changes.
 
