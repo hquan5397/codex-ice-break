@@ -13,7 +13,8 @@ This project uses spec-driven design. Feature behavior and acceptance criteria l
 
 - Start with `specs/template.md` for new features.
 - Keep backend and frontend changes aligned with the relevant spec.
-- Current implemented feature spec: `specs/manage-bike-listings.md`.
+- Current implemented feature spec: `specs/admin-dashboard-summary.md`.
+- Project agent rules live in `AGENTS.md`.
 
 ## Run With Docker
 

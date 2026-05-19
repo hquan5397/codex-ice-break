@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { Brackets, Repository } from 'typeorm';
+import { BikeSale } from '../admin-dashboard/bike-sale.entity';
 import { BikeBrand } from './bike-brand.enum';
 import { Bike } from './bike.entity';
 import { CreateBikeDto, UpdateBikeDto } from './commands';
@@ -10,6 +11,8 @@ export class BikesService {
   constructor(
     @InjectRepository(Bike)
     private readonly bikesRepository: Repository<Bike>,
+    @InjectRepository(BikeSale)
+    private readonly bikeSalesRepository: Repository<BikeSale>,
   ) {}
 
   async create(createBikeDto: CreateBikeDto, imageUrls: string[]): Promise<Bike> {
@@ -28,16 +31,29 @@ export class BikesService {
     return this.bikesRepository.save(bike);
   }
 
-  findAll(brands: BikeBrand[] = []): Promise<Bike[]> {
-    return this.bikesRepository.find({
-      where: {
-        ...(brands.length > 0 ? { brand: In(brands) } : {}),
-        sold: false,
-      },
-      order: {
-        createdAt: 'DESC',
-      },
-    });
+  findAll(brands: BikeBrand[] = [], search?: string): Promise<Bike[]> {
+    const searchTerm = search?.trim();
+    const queryBuilder = this.bikesRepository
+      .createQueryBuilder('bike')
+      .where('bike.sold = :sold', { sold: false })
+      .orderBy('bike.createdAt', 'DESC');
+
+    if (brands.length > 0) {
+      queryBuilder.andWhere('bike.brand IN (:...brands)', { brands });
+    }
+
+    if (searchTerm) {
+      queryBuilder.andWhere(
+        new Brackets((searchQuery) => {
+          searchQuery
+            .where('LOWER(bike.title) LIKE LOWER(:search)', { search: `%${searchTerm}%` })
+            .orWhere('LOWER(bike.brand) LIKE LOWER(:search)', { search: `%${searchTerm}%` })
+            .orWhere('LOWER(bike.model) LIKE LOWER(:search)', { search: `%${searchTerm}%` });
+        }),
+      );
+    }
+
+    return queryBuilder.getMany();
   }
 
   findAllForAdmin(): Promise<Bike[]> {
@@ -67,7 +83,19 @@ export class BikesService {
     }
 
     bike.sold = sold;
-    return this.bikesRepository.save(bike);
+    const updatedBike = await this.bikesRepository.save(bike);
+
+    if (sold) {
+      const existingSale = await this.bikeSalesRepository.findOneBy({ bikeId: id });
+      const sale = existingSale ?? this.bikeSalesRepository.create({ bikeId: id });
+      sale.saleAmount = updatedBike.price;
+      sale.soldAt = new Date();
+      await this.bikeSalesRepository.save(sale);
+    } else {
+      await this.bikeSalesRepository.delete({ bikeId: id });
+    }
+
+    return updatedBike;
   }
 
   async update(id: string, updateBikeDto: UpdateBikeDto, imageUrls?: string[]): Promise<Bike> {

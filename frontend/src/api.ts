@@ -36,6 +36,31 @@ export type LoginResponse = {
   expiresIn: string;
 };
 
+export type AdminDashboardSummary = {
+  totalListings: number;
+  sellingListings: number;
+  soldListings: number;
+  soldListingsInRange: number;
+  revenueInRange: string;
+  newestListings: Array<{
+    id: string;
+    title: string;
+    brand?: BikeBrand | null;
+    model?: string | null;
+    createdAt: string;
+  }>;
+};
+
+export type DashboardDateRange = {
+  from?: string;
+  to?: string;
+};
+
+export type GetBikesParams = {
+  brands?: BikeBrand[];
+  search?: string;
+};
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 async function readApiError(response: Response, fallback: string) {
@@ -58,14 +83,18 @@ async function readApiError(response: Response, fallback: string) {
   return text || fallback;
 }
 
-export async function getBikes(brands: BikeBrand[] = []): Promise<Bike[]> {
+export async function getBikes({ brands = [], search = '' }: GetBikesParams = {}): Promise<Bike[]> {
   const params = new URLSearchParams();
   brands.forEach((brand) => params.append('brand', brand));
+  if (search.trim()) {
+    params.set('search', search.trim());
+  }
+
   const queryString = params.toString();
   const response = await fetch(`${API_URL}/bikes${queryString ? `?${queryString}` : ''}`);
 
   if (!response.ok) {
-    throw new Error('Could not load bike listings');
+    throw new Error(await readApiError(response, 'Could not load bike listings'));
   }
 
   return response.json();
@@ -90,6 +119,30 @@ export async function getAdminBikes(token: string): Promise<Bike[]> {
 
   if (!response.ok) {
     throw new Error('Could not load admin bike listings');
+  }
+
+  return response.json();
+}
+
+export async function getAdminDashboardSummary(token: string, dateRange: DashboardDateRange = {}): Promise<AdminDashboardSummary> {
+  const params = new URLSearchParams();
+  if (dateRange.from) {
+    params.set('from', dateRange.from);
+  }
+
+  if (dateRange.to) {
+    params.set('to', dateRange.to);
+  }
+
+  const queryString = params.toString();
+  const response = await fetch(`${API_URL}/admin/dashboard-summary${queryString ? `?${queryString}` : ''}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(await readApiError(response, 'Could not load dashboard summary'));
   }
 
   return response.json();

@@ -62,6 +62,14 @@ describe('BikesController', () => {
     expect(queryBus.execute).toHaveBeenCalledWith(new GetPublicBikesQuery([BikeBrand.Honda, BikeBrand.Yamaha]));
   });
 
+  it('returns bike listings filtered by brands and search', async () => {
+    const bikes = [{ id: 'bike-1', brand: BikeBrand.Honda, model: 'SH' }] as Bike[];
+    queryBus.execute.mockResolvedValue(bikes);
+
+    await expect(controller.findAll({ brand: [BikeBrand.Honda, BikeBrand.Yamaha], search: 'sh' })).resolves.toBe(bikes);
+    expect(queryBus.execute).toHaveBeenCalledWith(new GetPublicBikesQuery([BikeBrand.Honda, BikeBrand.Yamaha], 'sh'));
+  });
+
   it('returns all bike listings for admin', async () => {
     const bikes = [{ id: 'bike-1' }, { id: 'bike-2', sold: true }] as Bike[];
     queryBus.execute.mockResolvedValue(bikes);

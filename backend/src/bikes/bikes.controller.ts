@@ -149,7 +149,7 @@ export class BikesController {
 
   @Get()
   findAll(@Query() getPublicBikesDto: GetPublicBikesDto) {
-    return this.queryBus.execute(new GetPublicBikesQuery(getPublicBikesDto.brand));
+    return this.queryBus.execute(new GetPublicBikesQuery(getPublicBikesDto.brand, getPublicBikesDto.search));
   }
 
   @Get('admin')

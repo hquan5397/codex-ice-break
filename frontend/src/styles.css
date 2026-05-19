@@ -120,6 +120,106 @@ h1 {
   padding: 20px;
 }
 
+.dashboard-summary {
+  background: #ffffff;
+  border: 1px solid #dfe4dc;
+  border-radius: 8px;
+  box-shadow: 0 14px 40px rgba(31, 45, 38, 0.08);
+  display: grid;
+  gap: 16px;
+  margin: 0 auto 24px;
+  max-width: 1240px;
+  padding: 20px;
+}
+
+.dashboard-summary-header {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.date-range-controls {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.date-range-controls label {
+  min-width: 155px;
+}
+
+.summary-stat-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.summary-stat {
+  background: #f7f8f5;
+  border: 1px solid #e3e8e1;
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.summary-stat span {
+  color: #66736b;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.summary-stat strong {
+  color: #17211d;
+  font-size: 1.45rem;
+}
+
+.revenue-stat strong {
+  color: #d92f1c;
+  font-size: 1.18rem;
+}
+
+.newest-listings-summary h3 {
+  font-size: 0.95rem;
+  margin-bottom: 8px;
+}
+
+.newest-listings-summary ul {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.newest-listings-summary li {
+  align-items: center;
+  border-top: 1px solid #edf0ec;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  padding-top: 8px;
+}
+
+.newest-listings-summary span {
+  font-weight: 800;
+}
+
+.newest-listings-summary small,
+.newest-listings-summary p {
+  color: #66736b;
+}
+
+.dashboard-message {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+  justify-self: start;
+}
+
 .panel-heading {
   align-items: center;
   display: flex;
@@ -468,6 +568,8 @@ textarea:focus {
   gap: 16px;
   justify-content: space-between;
   margin-bottom: 18px;
+  position: relative;
+  z-index: 20;
 }
 
 .inventory-heading h2 {
@@ -480,14 +582,99 @@ textarea:focus {
   margin-top: 0;
 }
 
+.listing-results {
+  position: relative;
+}
+
+.listing-results.is-refreshing .customer-grid {
+  opacity: 0.62;
+}
+
+.listing-refreshing,
+.listing-error {
+  align-items: center;
+  border-radius: 6px;
+  display: inline-flex;
+  font-size: 0.9rem;
+  font-weight: 800;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 12px;
+}
+
+.listing-refreshing {
+  background: #17211d;
+  box-shadow: 0 10px 24px rgba(31, 45, 38, 0.16);
+  color: #ffffff;
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  z-index: 2;
+}
+
+.listing-error {
+  background: #fff2f0;
+  color: #9f2b1d;
+  margin-bottom: 12px;
+}
+
 .inventory-tools {
   align-items: center;
   display: flex;
   gap: 10px;
+  justify-content: flex-end;
+  max-width: 780px;
+  position: relative;
+  transform: translateX(-18px);
+  z-index: 20;
+}
+
+.search-field {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #d6ddd8;
+  border-radius: 6px;
+  color: #5f6d66;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: auto minmax(220px, 1fr);
+  min-height: 42px;
+  min-width: 300px;
+  padding: 0 10px;
+}
+
+.search-field:focus-within {
+  border-color: #1f7a55;
+  box-shadow: 0 0 0 3px rgba(31, 122, 85, 0.14);
+}
+
+.search-field input {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  min-height: 40px;
+  padding: 0;
+}
+
+.search-field input:focus {
+  box-shadow: none;
+}
+
+.sr-only {
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
 }
 
 .brand-filter {
   position: relative;
+  z-index: 30;
 }
 
 .brand-filter summary {
@@ -541,7 +728,7 @@ textarea:focus {
   right: 0;
   top: calc(100% + 8px);
   width: min(320px, 84vw);
-  z-index: 3;
+  z-index: 40;
 }
 
 .brand-filter-clear {
@@ -970,6 +1157,16 @@ textarea:focus {
     grid-template-columns: 1fr;
   }
 
+  .dashboard-summary-header,
+  .date-range-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .summary-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .customer-nav,
   .customer-hero,
   .customer-inventory {
@@ -1023,8 +1220,19 @@ textarea:focus {
 
   .inventory-tools,
   .brand-filter,
+  .search-field,
   .brand-filter summary {
+    transform: none;
     width: 100%;
+  }
+
+  .inventory-tools {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .search-field {
+    min-width: 0;
   }
 
   .brand-filter-menu {
@@ -1045,5 +1253,15 @@ textarea:focus {
 
   .detail-facts {
     grid-template-columns: 1fr;
+  }
+
+  .summary-stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .listing-refreshing {
+    left: 12px;
+    right: 12px;
+    justify-content: center;
   }
 }

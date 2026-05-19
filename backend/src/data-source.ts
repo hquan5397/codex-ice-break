@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { join } from 'path';
 import { DataSource, DataSourceOptions } from 'typeorm';
+import { BikeSale } from './admin-dashboard/bike-sale.entity';
 import { Bike } from './bikes/bike.entity';
 
 export const dataSourceOptions: DataSourceOptions = {
@@ -10,7 +11,7 @@ export const dataSourceOptions: DataSourceOptions = {
   username: process.env.DATABASE_USER ?? 'postgres',
   password: process.env.DATABASE_PASSWORD ?? 'postgres',
   database: process.env.DATABASE_NAME ?? 'motorbike_store',
-  entities: [Bike],
+  entities: [Bike, BikeSale],
   migrations: [join(__dirname, 'migrations', '*{.ts,.js}')],
   synchronize: false,
 };

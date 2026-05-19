@@ -1,5 +1,6 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Activity,
   ArrowLeft,
   Camera,
   Download,
@@ -13,16 +14,19 @@ import {
   Plus,
   RefreshCcw,
   Save,
+  Search as SearchIcon,
   Tag,
   ChevronDown,
   ChevronUp,
   X,
 } from 'lucide-react';
 import {
+  AdminDashboardSummary,
   Bike,
   BikeBrand,
   createBike,
   getAdminBikes,
+  getAdminDashboardSummary,
   getBike,
   getBikes,
   getCurrentAdmin,
@@ -104,18 +108,31 @@ function useBikes(loadBikeListings = getBikes) {
   const [bikes, setBikes] = useState<Bike[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const latestRequestId = useRef(0);
 
   async function loadBikes() {
+    const requestId = latestRequestId.current + 1;
+    latestRequestId.current = requestId;
     setIsLoading(true);
     setError('');
 
     try {
       const bikeListings = await loadBikeListings();
+      if (requestId !== latestRequestId.current) {
+        return;
+      }
+
       setBikes(bikeListings);
     } catch (loadError) {
+      if (requestId !== latestRequestId.current) {
+        return;
+      }
+
       setError(loadError instanceof Error ? loadError.message : 'Could not load bikes');
     } finally {
-      setIsLoading(false);
+      if (requestId === latestRequestId.current) {
+        setIsLoading(false);
+      }
     }
   }
 
@@ -521,8 +538,22 @@ function BikeDetailPage({ id }: { id: string }) {
 
 function CustomerPage() {
   const [selectedBrands, setSelectedBrands] = useState<BikeBrand[]>([]);
-  const loadCustomerBikes = useMemo(() => () => getBikes(selectedBrands), [selectedBrands]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const loadCustomerBikes = useMemo(
+    () => () => getBikes({ brands: selectedBrands, search: debouncedSearchTerm }),
+    [debouncedSearchTerm, selectedBrands],
+  );
   const { bikes, error, isLoading, loadBikes } = useBikes(loadCustomerBikes);
+  const hasListings = bikes.length > 0;
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim());
+    }, 300);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [searchTerm]);
 
   function toggleBrand(brand: BikeBrand) {
     setSelectedBrands((current) =>
@@ -569,6 +600,16 @@ function CustomerPage() {
             <h2>Current inventory</h2>
           </div>
           <div className="inventory-tools">
+            <label className="search-field">
+              <span className="sr-only">Search listings</span>
+              <SearchIcon size={18} />
+              <input
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Search title, brand, or model"
+                type="search"
+              />
+            </label>
             <BrandFilter
               selectedBrands={selectedBrands}
               onClear={() => setSelectedBrands([])}
@@ -580,22 +621,35 @@ function CustomerPage() {
           </div>
         </div>
 
-        {isLoading ? (
+        {isLoading && !hasListings ? (
           <div className="empty-state customer-state">
             <Loader2 className="spin" size={28} />
             Loading bikes for sale
           </div>
-        ) : error ? (
+        ) : error && !hasListings ? (
           <div className="empty-state customer-state error-state">
             Could not load listings. Please call {store.phone} for current bikes.
           </div>
-        ) : bikes.length === 0 ? (
+        ) : !hasListings ? (
           <div className="empty-state customer-state">No bikes are listed right now. Please call {store.phone} for availability.</div>
         ) : (
-          <div className="bike-grid customer-grid">
-            {bikes.map((bike) => (
-              <BikeCard bike={bike} key={bike.id} variant="customer" />
-            ))}
+          <div className={`listing-results ${isLoading ? 'is-refreshing' : ''}`}>
+            {error && (
+              <div className="listing-error" role="status">
+                Could not refresh listings. Please try again.
+              </div>
+            )}
+            <div className="bike-grid customer-grid">
+              {bikes.map((bike) => (
+                <BikeCard bike={bike} key={bike.id} variant="customer" />
+              ))}
+            </div>
+            {isLoading && (
+              <div className="listing-refreshing" role="status">
+                <Loader2 className="spin" size={18} />
+                Updating listings
+              </div>
+            )}
           </div>
         )}
       </section>
@@ -745,6 +799,89 @@ function ImageManager({
   );
 }
 
+function AdminDashboardSummaryPanel({
+  dateFrom,
+  dateTo,
+  error,
+  isLoading,
+  onDateFromChange,
+  onDateToChange,
+  summary,
+}: {
+  dateFrom: string;
+  dateTo: string;
+  error: string;
+  isLoading: boolean;
+  onDateFromChange: (value: string) => void;
+  onDateToChange: (value: string) => void;
+  summary: AdminDashboardSummary | null;
+}) {
+  const stats = [
+    ['Total listings', summary?.totalListings ?? 0],
+    ['Selling', summary?.sellingListings ?? 0],
+    ['Sold', summary?.soldListings ?? 0],
+    ['Sold in range', summary?.soldListingsInRange ?? 0],
+  ];
+
+  return (
+    <section className="dashboard-summary">
+      <div className="dashboard-summary-header">
+        <div className="panel-heading">
+          <Activity size={20} />
+          <h2>Dashboard summary</h2>
+        </div>
+        <div className="date-range-controls">
+          <label>
+            From
+            <input type="date" value={dateFrom} onChange={(event) => onDateFromChange(event.target.value)} />
+          </label>
+          <label>
+            To
+            <input type="date" value={dateTo} onChange={(event) => onDateToChange(event.target.value)} />
+          </label>
+        </div>
+      </div>
+
+      <div className="summary-stat-grid">
+        {stats.map(([label, value]) => (
+          <article className="summary-stat" key={label}>
+            <span>{label}</span>
+            <strong>{value}</strong>
+          </article>
+        ))}
+        <article className="summary-stat revenue-stat">
+          <span>Revenue in range</span>
+          <strong>{formatBikePrice(summary?.revenueInRange ?? '0')}</strong>
+        </article>
+      </div>
+
+      <div className="newest-listings-summary">
+        <h3>Newest listings</h3>
+        {summary?.newestListings.length ? (
+          <ul>
+            {summary.newestListings.map((listing) => (
+              <li key={listing.id}>
+                <span>{listing.title}</span>
+                <small>{[listing.brand, listing.model].filter(Boolean).join(' / ') || 'Motorbike'}</small>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>No listings yet.</p>
+        )}
+      </div>
+
+      {isLoading && (
+        <p className="message dashboard-message">
+          <Loader2 className="spin" size={16} />
+          Loading dashboard summary
+        </p>
+      )}
+      {error && <p className="message error">{error}</p>}
+    </section>
+  );
+}
+
 function AdminPage({
   adminUsername,
   onLogout,
@@ -761,6 +898,11 @@ function AdminPage({
   const [isSaving, setIsSaving] = useState(false);
   const [updatingBikeId, setUpdatingBikeId] = useState('');
   const [success, setSuccess] = useState('');
+  const [dashboardSummary, setDashboardSummary] = useState<AdminDashboardSummary | null>(null);
+  const [dashboardError, setDashboardError] = useState('');
+  const [isDashboardLoading, setIsDashboardLoading] = useState(true);
+  const [dashboardDateFrom, setDashboardDateFrom] = useState('');
+  const [dashboardDateTo, setDashboardDateTo] = useState('');
   const imageItemsRef = useRef<ImageFormItem[]>([]);
   const editingBike = bikes.find((bike) => bike.id === editingBikeId);
   const isEditing = Boolean(editingBike);
@@ -774,6 +916,27 @@ function AdminPage({
       cleanupImagePreviews(imageItemsRef.current);
     };
   }, []);
+
+  async function loadDashboardSummary() {
+    setIsDashboardLoading(true);
+    setDashboardError('');
+
+    try {
+      const summary = await getAdminDashboardSummary(token, {
+        from: dashboardDateFrom,
+        to: dashboardDateTo,
+      });
+      setDashboardSummary(summary);
+    } catch (summaryError) {
+      setDashboardError(summaryError instanceof Error ? summaryError.message : 'Could not load dashboard summary');
+    } finally {
+      setIsDashboardLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadDashboardSummary();
+  }, [dashboardDateFrom, dashboardDateTo, token]);
 
   function updateField(field: keyof EditListingForm, value: string | boolean | ImageFormItem[]) {
     setForm((current) => ({
@@ -934,10 +1097,12 @@ function AdminPage({
       if (editingBikeId) {
         const updatedBike = await updateBike(editingBikeId, buildUpdateFormData(), token);
         setBikes((current) => current.map((currentBike) => (currentBike.id === updatedBike.id ? updatedBike : currentBike)));
+        await loadDashboardSummary();
         setSuccess('Listing updated.');
       } else {
         const newBike = await createBike(buildCreateFormData(), token);
         setBikes((current) => [newBike, ...current]);
+        await loadDashboardSummary();
         setSuccess('Listing published.');
       }
 
@@ -959,6 +1124,7 @@ function AdminPage({
     try {
       const updatedBike = await updateBikeSold(bike.id, !bike.sold, token);
       setBikes((current) => current.map((currentBike) => (currentBike.id === updatedBike.id ? updatedBike : currentBike)));
+      await loadDashboardSummary();
       setSuccess(`Listing marked as ${updatedBike.sold ? 'sold' : 'selling'}.`);
     } catch (statusError) {
       setError(statusError instanceof Error ? statusError.message : 'Could not update bike status');
@@ -987,6 +1153,16 @@ function AdminPage({
           </button>
         </div>
       </section>
+
+      <AdminDashboardSummaryPanel
+        dateFrom={dashboardDateFrom}
+        dateTo={dashboardDateTo}
+        error={dashboardError}
+        isLoading={isDashboardLoading}
+        onDateFromChange={setDashboardDateFrom}
+        onDateToChange={setDashboardDateTo}
+        summary={dashboardSummary}
+      />
 
       <section className="workspace">
         <form className="admin-panel" onSubmit={handleSubmit}>
