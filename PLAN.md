@@ -1,24 +1,23 @@
-# Fix GitHub PR Governance Files Plan
+# Docker Image Workflow Trigger Plan
 
 ## Summary
 
-Fix the GitHub PR governance files so the plan gate workflow and CODEOWNERS rules work with GitHub’s expected paths and syntax.
+Update the Docker image workflow so it only runs after a pull request has been merged into `main`.
 
 ## Proposed Changes
 
-- Update `.github/workflows/plan-gate.yml`:
-  - check for `.github/pull_request_template.md`
-  - update the error/success messages to use the same path
-- Update `.github/CODEOWNERS`:
-  - replace invalid default owner line `- @hquan5397`
-  - use `* @hquan5397` as the default owner rule
-  - keep existing ownership for security, workflows, and infra paths
+- Update `.github/workflows/docker-image.yml`:
+  - keep `push` on `main`
+  - remove the `pull_request` trigger
+  - keep Docker Hub login and image push behavior unchanged
+
+## Why This Works
+
+GitHub Actions does not have a direct "after PR merged" trigger for this build style. When a PR is merged into `main`, GitHub creates a push event on `main`, so `on: push` with `branches: ["main"]` is the correct trigger.
 
 ## Verification
 
-- No local build/test required because this is GitHub metadata only.
-- Confirm files are present:
-  - `.github/pull_request_template.md`
-  - `.github/workflows/plan-gate.yml`
-  - `.github/CODEOWNERS`
-- Future PRs should pass the plan gate path check and request the expected owner review.
+- No local app build is required because this is workflow trigger configuration only.
+- Confirm `.github/workflows/docker-image.yml` has only:
+  - `on.push.branches: ["main"]`
+- After merge, GitHub should run the Docker image workflow and push backend/frontend images to Docker Hub.
