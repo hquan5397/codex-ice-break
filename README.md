@@ -98,3 +98,7 @@ npm run migration:generate -- src/migrations/NameOfChange
 ## Notes
 
 TypeORM `synchronize` is disabled by default. Keep schema changes in `backend/src/migrations` and run migrations before relying on new database fields.
+
+## CI/CD
+
+The Docker image workflow runs after changes are merged into `main`. It builds backend and frontend Docker images and pushes them to Docker Hub using the configured repository secrets.
