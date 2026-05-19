@@ -19,6 +19,13 @@ type MockBikeRepository = {
   findOneBy: jest.Mock;
 };
 
+type MockBikeSaleRepository = {
+  create: jest.Mock;
+  delete: jest.Mock;
+  findOneBy: jest.Mock;
+  save: jest.Mock;
+};
+
 function createMockQueryBuilder(): MockBikeQueryBuilder {
   const queryBuilder = {
     andWhere: jest.fn(),
@@ -43,16 +50,27 @@ function createMockRepository(): MockBikeRepository {
   };
 }
 
+function createMockBikeSaleRepository(): MockBikeSaleRepository {
+  return {
+    create: jest.fn(),
+    delete: jest.fn(),
+    findOneBy: jest.fn(),
+    save: jest.fn(),
+  };
+}
+
 describe('BikesService', () => {
   let repository: MockBikeRepository;
+  let bikeSalesRepository: MockBikeSaleRepository;
   let queryBuilder: MockBikeQueryBuilder;
   let service: BikesService;
 
   beforeEach(() => {
     queryBuilder = createMockQueryBuilder();
     repository = createMockRepository();
+    bikeSalesRepository = createMockBikeSaleRepository();
     repository.createQueryBuilder.mockReturnValue(queryBuilder);
-    service = new BikesService(repository as never);
+    service = new BikesService(repository as never, bikeSalesRepository as never);
   });
 
   it('creates a bike listing with decimal-safe price and ordered image URLs', async () => {
@@ -195,20 +213,47 @@ describe('BikesService', () => {
   });
 
   it('updates sold status for an existing listing', async () => {
-    const bike = { id: 'bike-1', sold: false } as Bike;
+    const bike = { id: 'bike-1', sold: false, price: '68000000.00' } as Bike;
+    const sale = { bikeId: 'bike-1' };
     repository.findOneBy.mockResolvedValue(bike);
     repository.save.mockImplementation((updatedBike: Bike) => Promise.resolve(updatedBike));
+    bikeSalesRepository.findOneBy.mockResolvedValue(null);
+    bikeSalesRepository.create.mockReturnValue(sale);
+    bikeSalesRepository.save.mockImplementation((savedSale) => Promise.resolve(savedSale));
 
     await expect(service.updateSold('bike-1', true)).resolves.toEqual({
       id: 'bike-1',
       sold: true,
+      price: '68000000.00',
     });
 
     expect(repository.findOneBy).toHaveBeenCalledWith({ id: 'bike-1' });
     expect(repository.save).toHaveBeenCalledWith({
       id: 'bike-1',
       sold: true,
+      price: '68000000.00',
     });
+    expect(bikeSalesRepository.create).toHaveBeenCalledWith({ bikeId: 'bike-1' });
+    expect(bikeSalesRepository.save).toHaveBeenCalledWith({
+      bikeId: 'bike-1',
+      saleAmount: '68000000.00',
+      soldAt: expect.any(Date),
+    });
+  });
+
+  it('removes analytics when marking a listing as selling', async () => {
+    const bike = { id: 'bike-1', sold: true, price: '68000000.00' } as Bike;
+    repository.findOneBy.mockResolvedValue(bike);
+    repository.save.mockImplementation((updatedBike: Bike) => Promise.resolve(updatedBike));
+
+    await expect(service.updateSold('bike-1', false)).resolves.toEqual({
+      id: 'bike-1',
+      sold: false,
+      price: '68000000.00',
+    });
+
+    expect(bikeSalesRepository.delete).toHaveBeenCalledWith({ bikeId: 'bike-1' });
+    expect(bikeSalesRepository.save).not.toHaveBeenCalled();
   });
 
   it('throws NotFoundException when updating sold status for a missing listing', async () => {

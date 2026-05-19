@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { join } from 'path';
+import { AdminDashboardModule } from './admin-dashboard/admin-dashboard.module';
 import { AuthModule } from './auth/auth.module';
 import { BikesModule } from './bikes/bikes.module';
 import { validateProductionConfig } from './config/validate-production-config';
@@ -38,6 +39,7 @@ import { validateProductionConfig } from './config/validate-production-config';
         };
       },
     }),
+    AdminDashboardModule,
     AuthModule,
     BikesModule,
   ],
