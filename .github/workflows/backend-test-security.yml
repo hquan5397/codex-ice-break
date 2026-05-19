@@ -6,6 +6,9 @@ on:
 
 jobs:
   test:
+    # Defensive gating: only run if this is actually a PR context
+    if: github.event_name == 'pull_request'
+
     runs-on: ubuntu-latest
     defaults:
       run:
