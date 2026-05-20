@@ -12,6 +12,10 @@ export const bikeBrands = [
 
 export type BikeBrand = (typeof bikeBrands)[number];
 
+export const listingSorts = ['newest', 'price_asc', 'price_desc'] as const;
+
+export type ListingSort = (typeof listingSorts)[number];
+
 export type Bike = {
   id: string;
   title: string;
@@ -60,6 +64,7 @@ export type DashboardDateRange = {
 export type GetBikesParams = {
   brands?: BikeBrand[];
   search?: string;
+  sort?: ListingSort;
 };
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
@@ -84,12 +89,13 @@ async function readApiError(response: Response, fallback: string) {
   return text || fallback;
 }
 
-export async function getBikes({ brands = [], search = '' }: GetBikesParams = {}): Promise<Bike[]> {
+export async function getBikes({ brands = [], search = '', sort = 'newest' }: GetBikesParams = {}): Promise<Bike[]> {
   const params = new URLSearchParams();
   brands.forEach((brand) => params.append('brand', brand));
   if (search.trim()) {
     params.set('search', search.trim());
   }
+  params.set('sort', sort);
 
   const queryString = params.toString();
   const response = await fetch(`${API_URL}/bikes${queryString ? `?${queryString}` : ''}`);

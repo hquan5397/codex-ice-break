@@ -8,7 +8,7 @@ import { BikeBrand } from '../../src/bikes/bike-brand.enum';
 import { Bike } from '../../src/bikes/bike.entity';
 import { BikesController } from '../../src/bikes/bikes.controller';
 import { CreateBikeCommand, UpdateBikeCommand, UpdateBikeSoldCommand } from '../../src/bikes/commands';
-import { GetAdminBikesQuery, GetBikeQuery, GetPublicBikesQuery } from '../../src/bikes/queries';
+import { GetAdminBikesQuery, GetBikeQuery, GetPublicBikesQuery, ListingSort } from '../../src/bikes/queries';
 
 jest.mock('fs/promises', () => ({
   readFile: jest.fn(),
@@ -62,12 +62,12 @@ describe('BikesController', () => {
     expect(queryBus.execute).toHaveBeenCalledWith(new GetPublicBikesQuery([BikeBrand.Honda, BikeBrand.Yamaha]));
   });
 
-  it('returns bike listings filtered by brands and search', async () => {
+  it('returns bike listings filtered by brands, search, and sort', async () => {
     const bikes = [{ id: 'bike-1', brand: BikeBrand.Honda, model: 'SH' }] as Bike[];
     queryBus.execute.mockResolvedValue(bikes);
 
-    await expect(controller.findAll({ brand: [BikeBrand.Honda, BikeBrand.Yamaha], search: 'sh' })).resolves.toBe(bikes);
-    expect(queryBus.execute).toHaveBeenCalledWith(new GetPublicBikesQuery([BikeBrand.Honda, BikeBrand.Yamaha], 'sh'));
+    await expect(controller.findAll({ brand: [BikeBrand.Honda, BikeBrand.Yamaha], search: 'sh', sort: ListingSort.PriceAsc })).resolves.toBe(bikes);
+    expect(queryBus.execute).toHaveBeenCalledWith(new GetPublicBikesQuery([BikeBrand.Honda, BikeBrand.Yamaha], 'sh', ListingSort.PriceAsc));
   });
 
   it('returns all bike listings for admin', async () => {

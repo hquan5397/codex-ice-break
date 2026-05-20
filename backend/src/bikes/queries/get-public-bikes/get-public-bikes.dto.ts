@@ -1,6 +1,7 @@
 import { Transform } from 'class-transformer';
 import { ArrayMaxSize, IsArray, IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
 import { BikeBrand, bikeBrands } from '../../bike-brand.enum';
+import { ListingSort } from './listing-sort.enum';
 
 function optionalBrandList(value: unknown) {
   if (value === undefined || value === '') {
@@ -24,4 +25,8 @@ export class GetPublicBikesDto {
   @IsString()
   @MaxLength(120)
   search?: string;
+
+  @IsOptional()
+  @IsEnum(ListingSort)
+  sort?: ListingSort;
 }

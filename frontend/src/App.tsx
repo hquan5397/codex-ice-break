@@ -25,6 +25,7 @@ import {
   AdminDashboardSummary,
   Bike,
   BikeBrand,
+  ListingSort,
   createBike,
   getAdminBikes,
   getAdminDashboardSummary,
@@ -70,6 +71,12 @@ const store = {
 };
 
 const authTokenKey = 'motorbike-admin-token';
+
+const listingSortOptions: Array<{ label: string; value: ListingSort }> = [
+  { label: 'Newest', value: 'newest' },
+  { label: 'Price: Low to high', value: 'price_asc' },
+  { label: 'Price: High to low', value: 'price_desc' },
+];
 
 const emptyForm: ListingForm = {
   title: '',
@@ -567,9 +574,10 @@ function CustomerPage() {
   const [selectedBrands, setSelectedBrands] = useState<BikeBrand[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [selectedSort, setSelectedSort] = useState<ListingSort>('newest');
   const loadCustomerBikes = useMemo(
-    () => () => getBikes({ brands: selectedBrands, search: debouncedSearchTerm }),
-    [debouncedSearchTerm, selectedBrands],
+    () => () => getBikes({ brands: selectedBrands, search: debouncedSearchTerm, sort: selectedSort }),
+    [debouncedSearchTerm, selectedBrands, selectedSort],
   );
   const { bikes, error, isLoading, loadBikes } = useBikes(loadCustomerBikes);
   const hasListings = bikes.length > 0;
@@ -642,6 +650,19 @@ function CustomerPage() {
               onClear={() => setSelectedBrands([])}
               onToggleBrand={toggleBrand}
             />
+            <label className="sort-field">
+              <span>Sort</span>
+              <span className="select-control">
+                <select value={selectedSort} onChange={(event) => setSelectedSort(event.target.value as ListingSort)}>
+                  {listingSortOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={17} />
+              </span>
+            </label>
             <button className="icon-button" type="button" onClick={() => void loadBikes()} title="Refresh listings">
               <RefreshCcw size={18} />
             </button>

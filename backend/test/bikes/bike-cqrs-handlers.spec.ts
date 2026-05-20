@@ -7,7 +7,7 @@ import {
   UpdateBikeSoldHandler,
 } from '../../src/bikes/commands';
 import { BikeBrand } from '../../src/bikes/bike-brand.enum';
-import { GetAdminBikesHandler, GetBikeHandler, GetBikeQuery, GetPublicBikesHandler } from '../../src/bikes/queries';
+import { GetAdminBikesHandler, GetBikeHandler, GetBikeQuery, GetPublicBikesHandler, ListingSort } from '../../src/bikes/queries';
 import { GetPublicBikesQuery } from '../../src/bikes/queries/get-public-bikes';
 
 describe('Bike CQRS handlers', () => {
@@ -78,7 +78,7 @@ describe('Bike CQRS handlers', () => {
     const handler = new GetPublicBikesHandler(bikesService as never);
 
     await expect(handler.execute(new GetPublicBikesQuery())).resolves.toBe(bikes);
-    expect(bikesService.findAll).toHaveBeenCalledWith([], undefined);
+    expect(bikesService.findAll).toHaveBeenCalledWith([], undefined, ListingSort.Newest);
   });
 
   it('passes public listing brand filters to the service', async () => {
@@ -87,7 +87,7 @@ describe('Bike CQRS handlers', () => {
     const handler = new GetPublicBikesHandler(bikesService as never);
 
     await expect(handler.execute(new GetPublicBikesQuery([BikeBrand.Honda, BikeBrand.Yamaha]))).resolves.toBe(bikes);
-    expect(bikesService.findAll).toHaveBeenCalledWith([BikeBrand.Honda, BikeBrand.Yamaha], undefined);
+    expect(bikesService.findAll).toHaveBeenCalledWith([BikeBrand.Honda, BikeBrand.Yamaha], undefined, ListingSort.Newest);
   });
 
   it('passes public listing search to the service', async () => {
@@ -95,8 +95,8 @@ describe('Bike CQRS handlers', () => {
     bikesService.findAll.mockResolvedValue(bikes);
     const handler = new GetPublicBikesHandler(bikesService as never);
 
-    await expect(handler.execute(new GetPublicBikesQuery([BikeBrand.Honda], 'sh'))).resolves.toBe(bikes);
-    expect(bikesService.findAll).toHaveBeenCalledWith([BikeBrand.Honda], 'sh');
+    await expect(handler.execute(new GetPublicBikesQuery([BikeBrand.Honda], 'sh', ListingSort.PriceDesc))).resolves.toBe(bikes);
+    expect(bikesService.findAll).toHaveBeenCalledWith([BikeBrand.Honda], 'sh', ListingSort.PriceDesc);
   });
 
   it('handles admin listing queries', async () => {

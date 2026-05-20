@@ -3,6 +3,7 @@ import { Brackets } from 'typeorm';
 import { BikeBrand } from '../../src/bikes/bike-brand.enum';
 import { Bike } from '../../src/bikes/bike.entity';
 import { BikesService } from '../../src/bikes/bikes.service';
+import { ListingSort } from '../../src/bikes/queries';
 
 type MockBikeQueryBuilder = {
   addOrderBy: jest.Mock;
@@ -161,6 +162,28 @@ describe('BikesService', () => {
     expect(queryBuilder.andWhere).not.toHaveBeenCalled();
   });
 
+  it('returns public listings pinned first, then price low to high', async () => {
+    const bikes = [{ id: 'bike-1', price: '50000000.00' }] as Bike[];
+    queryBuilder.getMany.mockResolvedValue(bikes);
+
+    await expect(service.findAll([], undefined, ListingSort.PriceAsc)).resolves.toBe(bikes);
+
+    expect(queryBuilder.orderBy).toHaveBeenCalledWith('bike.pinned', 'DESC');
+    expect(queryBuilder.addOrderBy).toHaveBeenCalledWith('bike.price', 'ASC');
+    expect(queryBuilder.addOrderBy).toHaveBeenCalledWith('bike.createdAt', 'DESC');
+  });
+
+  it('returns public listings pinned first, then price high to low', async () => {
+    const bikes = [{ id: 'bike-1', price: '120000000.00' }] as Bike[];
+    queryBuilder.getMany.mockResolvedValue(bikes);
+
+    await expect(service.findAll([], undefined, ListingSort.PriceDesc)).resolves.toBe(bikes);
+
+    expect(queryBuilder.orderBy).toHaveBeenCalledWith('bike.pinned', 'DESC');
+    expect(queryBuilder.addOrderBy).toHaveBeenCalledWith('bike.price', 'DESC');
+    expect(queryBuilder.addOrderBy).toHaveBeenCalledWith('bike.createdAt', 'DESC');
+  });
+
   it('filters public listings by selected brands and excludes sold bikes', async () => {
     const bikes = [{ id: 'bike-1', brand: BikeBrand.Honda }] as Bike[];
     queryBuilder.getMany.mockResolvedValue(bikes);
@@ -199,12 +222,13 @@ describe('BikesService', () => {
     const bikes = [{ id: 'bike-1', brand: BikeBrand.Honda, model: 'SH' }] as Bike[];
     queryBuilder.getMany.mockResolvedValue(bikes);
 
-    await expect(service.findAll([BikeBrand.Honda, BikeBrand.Yamaha], 'sh')).resolves.toBe(bikes);
+    await expect(service.findAll([BikeBrand.Honda, BikeBrand.Yamaha], 'sh', ListingSort.PriceAsc)).resolves.toBe(bikes);
 
     expect(queryBuilder.andWhere).toHaveBeenCalledWith('bike.brand IN (:...brands)', {
       brands: [BikeBrand.Honda, BikeBrand.Yamaha],
     });
     expect(queryBuilder.andWhere).toHaveBeenCalledWith(expect.any(Brackets));
+    expect(queryBuilder.addOrderBy).toHaveBeenCalledWith('bike.price', 'ASC');
   });
 
   it('treats blank public listing search as no search filter', async () => {

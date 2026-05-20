@@ -8,7 +8,7 @@ This file tracks high-value product features and whether they have been implemen
 | Admin delete or archive listing | not-implemented |
 | Customer image gallery improvements with larger preview/fullscreen viewing | not-implemented |
 | Featured or pinned listings | implemented |
-| Listing sort controls by newest and price | not-implemented |
+| Listing sort controls by newest and price | implemented |
 | Public store info section with business hours and Google Maps link | not-implemented |
 | Structured bike specs fields such as engine size, color, condition, papers, transmission | not-implemented |
 | Admin dashboard summary for total, selling, sold, revenue, date range filtering, and newest listings | implemented |

@@ -5,6 +5,7 @@ import { BikeSale } from '../admin-dashboard/bike-sale.entity';
 import { BikeBrand } from './bike-brand.enum';
 import { Bike } from './bike.entity';
 import { CreateBikeDto, UpdateBikeDto } from './commands';
+import { ListingSort } from './queries/get-public-bikes/listing-sort.enum';
 
 @Injectable()
 export class BikesService {
@@ -32,13 +33,20 @@ export class BikesService {
     return this.bikesRepository.save(bike);
   }
 
-  findAll(brands: BikeBrand[] = [], search?: string): Promise<Bike[]> {
+  findAll(brands: BikeBrand[] = [], search?: string, sort: ListingSort = ListingSort.Newest): Promise<Bike[]> {
     const searchTerm = search?.trim();
     const queryBuilder = this.bikesRepository
       .createQueryBuilder('bike')
       .where('bike.sold = :sold', { sold: false })
-      .orderBy('bike.pinned', 'DESC')
-      .addOrderBy('bike.createdAt', 'DESC');
+      .orderBy('bike.pinned', 'DESC');
+
+    if (sort === ListingSort.PriceAsc) {
+      queryBuilder.addOrderBy('bike.price', 'ASC');
+    } else if (sort === ListingSort.PriceDesc) {
+      queryBuilder.addOrderBy('bike.price', 'DESC');
+    }
+
+    queryBuilder.addOrderBy('bike.createdAt', 'DESC');
 
     if (brands.length > 0) {
       queryBuilder.andWhere('bike.brand IN (:...brands)', { brands });

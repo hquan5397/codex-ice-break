@@ -13,7 +13,7 @@ This project uses spec-driven design. Feature behavior and acceptance criteria l
 
 - Start with `specs/template.md` for new features.
 - Keep backend and frontend changes aligned with the relevant spec.
-- Current implemented feature spec: `specs/pinned-listings.md`.
+- Current implemented feature spec: `specs/listing-sort-controls.md`.
 - Project agent rules live in `AGENTS.md`.
 
 ## Run With Docker
@@ -35,6 +35,12 @@ Open:
 `GET /api/bikes`
 
 Returns all bike listings.
+
+Optional query parameters:
+
+- `brand`: repeatable brand filter, for example `?brand=Honda&brand=Yamaha`
+- `search`: search by title, brand, or model
+- `sort`: `newest`, `price_asc`, or `price_desc`
 
 `GET /api/bikes/:id`
 
