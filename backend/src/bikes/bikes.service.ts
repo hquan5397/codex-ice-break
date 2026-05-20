@@ -26,6 +26,7 @@ export class BikesService {
       imageUrl: imageUrls[0],
       imageUrls,
       sold: false,
+      pinned: createBikeDto.pinned ?? false,
     });
 
     return this.bikesRepository.save(bike);
@@ -36,7 +37,8 @@ export class BikesService {
     const queryBuilder = this.bikesRepository
       .createQueryBuilder('bike')
       .where('bike.sold = :sold', { sold: false })
-      .orderBy('bike.createdAt', 'DESC');
+      .orderBy('bike.pinned', 'DESC')
+      .addOrderBy('bike.createdAt', 'DESC');
 
     if (brands.length > 0) {
       queryBuilder.andWhere('bike.brand IN (:...brands)', { brands });
@@ -60,6 +62,7 @@ export class BikesService {
     return this.bikesRepository.find({
       order: {
         sold: 'ASC',
+        pinned: 'DESC',
         createdAt: 'DESC',
       },
     });
@@ -135,6 +138,10 @@ export class BikesService {
 
     if (updateBikeDto.sold !== undefined) {
       bike.sold = updateBikeDto.sold;
+    }
+
+    if (updateBikeDto.pinned !== undefined) {
+      bike.pinned = updateBikeDto.pinned;
     }
 
     if (imageUrls) {

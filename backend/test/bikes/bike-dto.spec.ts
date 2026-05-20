@@ -30,6 +30,36 @@ describe('Bike DTO validation', () => {
     await expect(validate(updateDto)).resolves.toHaveLength(0);
   });
 
+  it('accepts pinned booleans for create and update requests', async () => {
+    const createDto = plainToInstance(CreateBikeDto, {
+      title: 'Honda SH',
+      price: '85000000',
+      pinned: 'true',
+    });
+    const updateDto = plainToInstance(UpdateBikeDto, {
+      pinned: 'false',
+    });
+
+    await expect(validate(createDto)).resolves.toHaveLength(0);
+    await expect(validate(updateDto)).resolves.toHaveLength(0);
+    expect(createDto.pinned).toBe(true);
+    expect(updateDto.pinned).toBe(false);
+  });
+
+  it('rejects invalid pinned values', async () => {
+    const createDto = plainToInstance(CreateBikeDto, {
+      title: 'Honda SH',
+      price: '85000000',
+      pinned: 'sometimes',
+    });
+    const updateDto = plainToInstance(UpdateBikeDto, {
+      pinned: 'sometimes',
+    });
+
+    expect((await validate(createDto)).map((error) => error.property)).toContain('pinned');
+    expect((await validate(updateDto)).map((error) => error.property)).toContain('pinned');
+  });
+
   it('rejects unsupported bike brands', async () => {
     const createDto = plainToInstance(CreateBikeDto, {
       title: 'Unknown bike',

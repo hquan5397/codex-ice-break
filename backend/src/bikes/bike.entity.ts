@@ -43,6 +43,9 @@ export class Bike {
   @Column({ default: false })
   sold: boolean;
 
+  @Column({ default: false })
+  pinned: boolean;
+
   @CreateDateColumn()
   createdAt: Date;
 

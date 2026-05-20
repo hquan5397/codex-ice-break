@@ -122,6 +122,11 @@ export class UpdateBikeDto {
   sold?: boolean;
 
   @IsOptional()
+  @Transform(({ value }) => optionalBoolean(value))
+  @IsBoolean()
+  pinned?: boolean;
+
+  @IsOptional()
   @Transform(({ value }) => optionalImageUrls(value))
   @ArrayMaxSize(8)
   @ArrayMinSize(1)

@@ -772,6 +772,11 @@ textarea:focus {
   height: 100%;
 }
 
+.customer-bike-card.pinned-bike-card {
+  border-color: #e0bd5b;
+  box-shadow: 0 12px 30px rgba(126, 91, 20, 0.13);
+}
+
 .customer-bike-card .price {
   color: #d92f1c;
   font-size: 1.12rem;
@@ -979,9 +984,12 @@ textarea:focus {
 }
 
 .status-pill {
+  align-items: center;
   border-radius: 999px;
+  display: inline-flex;
   font-size: 0.75rem;
   font-weight: 800;
+  gap: 5px;
   justify-self: start;
   padding: 5px 9px;
   text-transform: uppercase;
@@ -995,6 +1003,25 @@ textarea:focus {
 .status-pill.sold {
   background: #fff2f0;
   color: #9f2b1d;
+}
+
+.status-pill.pinned,
+.featured-pill {
+  background: #fff7df;
+  color: #7a5208;
+}
+
+.featured-pill {
+  align-items: center;
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 0.72rem;
+  font-weight: 900;
+  gap: 5px;
+  margin-bottom: 8px;
+  padding: 5px 9px;
+  text-transform: uppercase;
+  width: fit-content;
 }
 
 .status-button {
