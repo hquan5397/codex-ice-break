@@ -46,6 +46,7 @@ Feature specs are ordered by creation date.
 | 13 | 2026-05-18 20:55 | [Search Listing](search-listing.md) | implemented |
 | 14 | 2026-05-18 21:10 | [Refactor Loading Strategy In Listing Page](refactor-loading-strategy-in-listing-page.md) | implemented |
 | 15 | 2026-05-19 21:37 | [Admin Dashboard Summary](admin-dashboard-summary.md) | implemented |
+| 16 | 2026-05-20 22:08 | [Pinned Listings](pinned-listings.md) | implemented |
 
 ## Spec Status
 

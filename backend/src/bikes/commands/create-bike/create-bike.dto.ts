@@ -1,6 +1,7 @@
 import { Transform } from 'class-transformer';
 import {
   IsInt,
+  IsBoolean,
   IsEnum,
   IsNotEmpty,
   IsNumber,
@@ -26,6 +27,22 @@ function optionalText(value: unknown) {
   }
 
   return trimText(value);
+}
+
+function optionalBoolean(value: unknown) {
+  if (value === '' || value === undefined) {
+    return undefined;
+  }
+
+  if (value === 'true') {
+    return true;
+  }
+
+  if (value === 'false') {
+    return false;
+  }
+
+  return value;
 }
 
 export class CreateBikeDto {
@@ -67,4 +84,9 @@ export class CreateBikeDto {
   @IsString()
   @MaxLength(2000)
   description?: string;
+
+  @IsOptional()
+  @Transform(({ value }) => optionalBoolean(value))
+  @IsBoolean()
+  pinned?: boolean;
 }

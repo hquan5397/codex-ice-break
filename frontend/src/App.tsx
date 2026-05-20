@@ -15,6 +15,7 @@ import {
   RefreshCcw,
   Save,
   Search as SearchIcon,
+  Star,
   Tag,
   ChevronDown,
   ChevronUp,
@@ -32,6 +33,7 @@ import {
   getCurrentAdmin,
   login as loginAdmin,
   updateBike,
+  updateBikePinned,
   updateBikeSold,
   bikeBrands,
 } from './api';
@@ -46,6 +48,7 @@ type ListingForm = {
   mileage: string;
   description: string;
   images: ImageFormItem[];
+  pinned: boolean;
 };
 
 type EditListingForm = ListingForm & {
@@ -77,6 +80,7 @@ const emptyForm: ListingForm = {
   mileage: '',
   description: '',
   images: [],
+  pinned: false,
 };
 
 function formFromBike(bike: Bike): EditListingForm {
@@ -95,6 +99,7 @@ function formFromBike(bike: Bike): EditListingForm {
       name: `Image ${index + 1}`,
     })),
     sold: bike.sold,
+    pinned: bike.pinned,
   };
 }
 
@@ -283,14 +288,18 @@ function BikeCard({
   bike,
   isEditing = false,
   isUpdatingStatus = false,
+  isUpdatingPinned = false,
   onEdit,
+  onTogglePinned,
   onToggleSold,
   variant = 'admin',
 }: {
   bike: Bike;
   isEditing?: boolean;
   isUpdatingStatus?: boolean;
+  isUpdatingPinned?: boolean;
   onEdit?: (bike: Bike) => void;
+  onTogglePinned?: (bike: Bike) => void;
   onToggleSold?: (bike: Bike) => void;
   variant?: 'admin' | 'customer';
 }) {
@@ -298,14 +307,26 @@ function BikeCard({
   const isAdminCard = variant === 'admin';
 
   return (
-    <article className={`bike-card ${isCustomerCard ? 'customer-bike-card' : ''} ${bike.sold ? 'sold-bike-card' : ''}`}>
+    <article className={`bike-card ${isCustomerCard ? 'customer-bike-card' : ''} ${bike.sold ? 'sold-bike-card' : ''} ${bike.pinned ? 'pinned-bike-card' : ''}`}>
       <img src={primaryBikeImage(bike)} alt={bike.title} />
       <div className="bike-content">
         <div>
+          {isCustomerCard && bike.pinned && (
+            <span className="featured-pill">
+              <Star size={14} />
+              Featured
+            </span>
+          )}
           <h3>{bike.title}</h3>
           <p className="meta">{bikeMeta(bike)}</p>
         </div>
         {isAdminCard && <span className={`status-pill ${bike.sold ? 'sold' : 'selling'}`}>{bike.sold ? 'Sold' : 'Selling'}</span>}
+        {isAdminCard && bike.pinned && (
+          <span className="status-pill pinned">
+            <Star size={13} />
+            Pinned
+          </span>
+        )}
         {isAdminCard && <span className="image-count">{getBikeImages(bike).length} image{getBikeImages(bike).length === 1 ? '' : 's'}</span>}
         <strong className="price">{formatBikePrice(bike.price)}</strong>
         <div className="details">
@@ -330,6 +351,12 @@ function BikeCard({
               <button className="status-button" type="button" onClick={() => onToggleSold(bike)} disabled={isUpdatingStatus}>
                 {isUpdatingStatus ? <Loader2 className="spin" size={16} /> : <Tag size={16} />}
                 {bike.sold ? 'Mark selling' : 'Mark sold'}
+              </button>
+            )}
+            {onTogglePinned && (
+              <button className="status-button" type="button" onClick={() => onTogglePinned(bike)} disabled={isUpdatingPinned}>
+                {isUpdatingPinned ? <Loader2 className="spin" size={16} /> : <Star size={16} />}
+                {bike.pinned ? 'Unpin' : 'Pin'}
               </button>
             )}
           </div>
@@ -897,6 +924,7 @@ function AdminPage({
   const [editingBikeId, setEditingBikeId] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [updatingBikeId, setUpdatingBikeId] = useState('');
+  const [pinningBikeId, setPinningBikeId] = useState('');
   const [success, setSuccess] = useState('');
   const [dashboardSummary, setDashboardSummary] = useState<AdminDashboardSummary | null>(null);
   const [dashboardError, setDashboardError] = useState('');
@@ -1056,6 +1084,8 @@ function AdminPage({
       formData.append('sold', String(form.sold));
     }
 
+    formData.append('pinned', String(form.pinned));
+
     formData.append('imageUrls', JSON.stringify(form.images.filter((image) => image.url).map((image) => image.url)));
     let newImageIndex = 0;
     formData.append(
@@ -1130,6 +1160,22 @@ function AdminPage({
       setError(statusError instanceof Error ? statusError.message : 'Could not update bike status');
     } finally {
       setUpdatingBikeId('');
+    }
+  }
+
+  async function handleTogglePinned(bike: Bike) {
+    setError('');
+    setSuccess('');
+    setPinningBikeId(bike.id);
+
+    try {
+      const updatedBike = await updateBikePinned(bike.id, !bike.pinned, token);
+      setBikes((current) => current.map((currentBike) => (currentBike.id === updatedBike.id ? updatedBike : currentBike)));
+      setSuccess(`Listing ${updatedBike.pinned ? 'pinned' : 'unpinned'}.`);
+    } catch (pinError) {
+      setError(pinError instanceof Error ? pinError.message : 'Could not update pinned status');
+    } finally {
+      setPinningBikeId('');
     }
   }
 
@@ -1268,6 +1314,15 @@ function AdminPage({
             </label>
           )}
 
+          <label className="checkbox-field">
+            <input
+              checked={form.pinned}
+              type="checkbox"
+              onChange={(event) => updateField('pinned', event.target.checked)}
+            />
+            Featured on customer page
+          </label>
+
           <button className="primary-button" type="submit" disabled={isSaving}>
             {isSaving ? <Loader2 className="spin" size={18} /> : isEditing ? <Save size={18} /> : <Plus size={18} />}
             {isEditing ? 'Save changes' : 'Publish listing'}
@@ -1310,9 +1365,11 @@ function AdminPage({
                 <BikeCard
                   bike={bike}
                   isEditing={editingBikeId === bike.id}
+                  isUpdatingPinned={pinningBikeId === bike.id}
                   isUpdatingStatus={updatingBikeId === bike.id}
                   key={bike.id}
                   onEdit={startEditing}
+                  onTogglePinned={handleTogglePinned}
                   onToggleSold={handleToggleSold}
                 />
               ))}

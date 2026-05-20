@@ -24,6 +24,7 @@ export type Bike = {
   imageUrl: string;
   imageUrls?: string[];
   sold: boolean;
+  pinned: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -212,6 +213,25 @@ export async function updateBikeSold(id: string, sold: boolean, token: string): 
 
   if (!response.ok) {
     throw new Error(await readApiError(response, 'Could not update bike status'));
+  }
+
+  return response.json();
+}
+
+export async function updateBikePinned(id: string, pinned: boolean, token: string): Promise<Bike> {
+  const formData = new FormData();
+  formData.append('pinned', String(pinned));
+
+  const response = await fetch(`${API_URL}/bikes/${id}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(await readApiError(response, 'Could not update pinned status'));
   }
 
   return response.json();

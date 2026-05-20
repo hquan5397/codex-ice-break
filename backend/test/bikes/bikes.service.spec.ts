@@ -5,6 +5,7 @@ import { Bike } from '../../src/bikes/bike.entity';
 import { BikesService } from '../../src/bikes/bikes.service';
 
 type MockBikeQueryBuilder = {
+  addOrderBy: jest.Mock;
   andWhere: jest.Mock;
   getMany: jest.Mock;
   orderBy: jest.Mock;
@@ -28,6 +29,7 @@ type MockBikeSaleRepository = {
 
 function createMockQueryBuilder(): MockBikeQueryBuilder {
   const queryBuilder = {
+    addOrderBy: jest.fn(),
     andWhere: jest.fn(),
     getMany: jest.fn(),
     orderBy: jest.fn(),
@@ -37,6 +39,7 @@ function createMockQueryBuilder(): MockBikeQueryBuilder {
   queryBuilder.where.mockReturnValue(queryBuilder);
   queryBuilder.andWhere.mockReturnValue(queryBuilder);
   queryBuilder.orderBy.mockReturnValue(queryBuilder);
+  queryBuilder.addOrderBy.mockReturnValue(queryBuilder);
   return queryBuilder;
 }
 
@@ -80,6 +83,7 @@ describe('BikesService', () => {
       imageUrl: 'http://localhost:3000/uploads/r3.webp',
       imageUrls: ['http://localhost:3000/uploads/r3.webp', 'http://localhost:3000/uploads/r3-side.webp'],
       sold: false,
+      pinned: false,
     };
 
     repository.create.mockReturnValue(createdBike);
@@ -99,9 +103,37 @@ describe('BikesService', () => {
       imageUrl: 'http://localhost:3000/uploads/r3.webp',
       imageUrls: ['http://localhost:3000/uploads/r3.webp', 'http://localhost:3000/uploads/r3-side.webp'],
       sold: false,
+      pinned: false,
     });
     expect(repository.save).toHaveBeenCalledWith(createdBike);
     expect(result).toEqual({ id: 'bike-1', ...createdBike });
+  });
+
+  it('creates a pinned bike listing when requested by admin', async () => {
+    const createdBike = {
+      title: 'Honda SH',
+      price: '85000000.00',
+      imageUrl: 'http://localhost:3000/uploads/sh.webp',
+      imageUrls: ['http://localhost:3000/uploads/sh.webp'],
+      sold: false,
+      pinned: true,
+    };
+
+    repository.create.mockReturnValue(createdBike);
+    repository.save.mockResolvedValue({ id: 'bike-1', ...createdBike });
+
+    await expect(
+      service.create(
+        {
+          title: 'Honda SH',
+          price: 85000000,
+          pinned: true,
+        },
+        ['http://localhost:3000/uploads/sh.webp'],
+      ),
+    ).resolves.toEqual({ id: 'bike-1', ...createdBike });
+
+    expect(repository.create).toHaveBeenCalledWith(expect.objectContaining({ pinned: true }));
   });
 
   it('rejects creating a bike listing without images', async () => {
@@ -116,7 +148,7 @@ describe('BikesService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('returns public listings newest first and excludes sold bikes', async () => {
+  it('returns public listings pinned first, then newest first, and excludes sold bikes', async () => {
     const bikes = [{ id: 'bike-1' }] as Bike[];
     queryBuilder.getMany.mockResolvedValue(bikes);
 
@@ -124,7 +156,8 @@ describe('BikesService', () => {
 
     expect(repository.createQueryBuilder).toHaveBeenCalledWith('bike');
     expect(queryBuilder.where).toHaveBeenCalledWith('bike.sold = :sold', { sold: false });
-    expect(queryBuilder.orderBy).toHaveBeenCalledWith('bike.createdAt', 'DESC');
+    expect(queryBuilder.orderBy).toHaveBeenCalledWith('bike.pinned', 'DESC');
+    expect(queryBuilder.addOrderBy).toHaveBeenCalledWith('bike.createdAt', 'DESC');
     expect(queryBuilder.andWhere).not.toHaveBeenCalled();
   });
 
@@ -192,6 +225,7 @@ describe('BikesService', () => {
     expect(repository.find).toHaveBeenCalledWith({
       order: {
         sold: 'ASC',
+        pinned: 'DESC',
         createdAt: 'DESC',
       },
     });
@@ -280,6 +314,7 @@ describe('BikesService', () => {
         title: 'Honda SH 150i',
         price: 72000000,
         brand: BikeBrand.Honda,
+        pinned: true,
         sold: true,
       }),
     ).resolves.toEqual({
@@ -289,6 +324,7 @@ describe('BikesService', () => {
       brand: BikeBrand.Honda,
       imageUrl: 'http://localhost:3000/uploads/old.webp',
       imageUrls: ['http://localhost:3000/uploads/old.webp'],
+      pinned: true,
       sold: true,
     });
 
@@ -300,8 +336,29 @@ describe('BikesService', () => {
       brand: BikeBrand.Honda,
       imageUrl: 'http://localhost:3000/uploads/old.webp',
       imageUrls: ['http://localhost:3000/uploads/old.webp'],
+      pinned: true,
       sold: true,
     });
+  });
+
+  it('updates pinned status for an existing listing', async () => {
+    const bike = {
+      id: 'bike-1',
+      title: 'Honda SH',
+      price: '68000000.00',
+      imageUrl: 'http://localhost:3000/uploads/old.webp',
+      imageUrls: ['http://localhost:3000/uploads/old.webp'],
+      pinned: false,
+      sold: false,
+    } as Bike;
+    repository.findOneBy.mockResolvedValue(bike);
+    repository.save.mockImplementation((updatedBike: Bike) => Promise.resolve(updatedBike));
+
+    await expect(service.update('bike-1', { pinned: true })).resolves.toMatchObject({
+      pinned: true,
+    });
+
+    expect(repository.save).toHaveBeenCalledWith(expect.objectContaining({ pinned: true }));
   });
 
   it('updates listing information and replaces the images', async () => {
