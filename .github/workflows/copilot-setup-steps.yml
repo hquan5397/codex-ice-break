@@ -1,0 +1,36 @@
+name: Copilot Setup Steps
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  copilot-setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+
+      - name: Install Copilot CLI
+        run: npm install -g @githubnext/github-copilot-cli
+
+      - name: Print Copilot CLI version
+        run: copilot --version
+
+      # Example: using Copilot CLI to explain a file
+      - name: Copilot CLI - explain backend/src/main.ts
+        run: copilot explain backend/src/main.ts
+        continue-on-error: true # copilot explain may require authentication, handle gracefully
+
+      # Example: using Copilot CLI to generate tests for a file
+      - name: Copilot CLI - generate tests for backend/src/auth.service.ts
+        run: copilot generate tests backend/src/auth.service.ts
+        continue-on-error: true
+
+      # Advice: For full Copilot CLI usage (e.g., authentication), you may need to manage auth tokens
