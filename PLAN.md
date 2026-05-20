@@ -1,56 +1,66 @@
-# Pinned Listings Implementation Plan
+# Listing Sort Controls Implementation Plan
 
 ## Summary
 
-Implement the `pinned-listings` spec so admins can mark listings as pinned, and customers see pinned selling bikes first while keeping current search, brand filtering, detail, and PDF behavior intact.
+Implement customer-facing listing sort controls so users can sort available bikes by newest, price low to high, or price high to low. Sorting will be handled by the backend public listing API and will preserve pinned-first ordering, search, brand filtering, and sold-listing exclusion.
 
 ## Proposed Changes
 
 ### Backend
 
-- Add `pinned: boolean` to the `Bike` entity with default `false`.
-- Add a TypeORM migration that adds the non-null `pinned` column with a safe default for existing listings.
-- Extend create/update DTOs and CQRS command/query flow so pinned status can be saved and returned.
-- Update public listing query sorting:
-  - `sold = false`
-  - optional brand filter
-  - optional search filter
-  - `pinned DESC`
-  - `createdAt DESC`
-- Keep sold pinned bikes hidden from public customer listings.
-- Preserve existing admin auth requirements for create/update operations.
+- Add a public listing sort enum/type with supported values:
+  - `newest`
+  - `price_asc`
+  - `price_desc`
+- Extend `GetPublicBikesDto` with optional `sort`.
+- Extend `GetPublicBikesQuery` and handler flow to pass `sort` into `BikesService.findAll`.
+- Update `BikesService.findAll(brands, search, sort)` query builder:
+  - always filter `bike.sold = false`
+  - apply optional brand filter
+  - apply optional search filter
+  - always order `bike.pinned DESC` first
+  - for `newest`, order `bike.createdAt DESC`
+  - for `price_asc`, order numeric price ascending, then newest
+  - for `price_desc`, order numeric price descending, then newest
+- No database migration.
 
 ### Frontend
 
-- Extend the shared bike type/API mapping to include `pinned`.
-- Add an admin pin/unpin control on listing cards or admin listing actions.
-- Preserve pinned status during edit flows unless the admin changes it.
-- Show a compact `Featured` or `Pinned` indicator on customer listing cards.
-- Ensure pinned cards still keep fixed bottom action buttons for `View details` and `PDF`.
-- Keep search and brand filters working with pinned-first ordering.
+- Add a `sort` value to customer page state, defaulting to `newest`.
+- Extend `getBikes` params/API query builder to send `sort`.
+- Add a compact sort select after the brand filter and before refresh.
+- Use labels:
+  - `Newest`
+  - `Price: Low to high`
+  - `Price: High to low`
+- Keep listing refresh scoped to the listing results area.
+- Keep mobile control order as search, brand filter, sort, refresh.
 
 ### Specs And Docs
 
-- Move `specs/pinned-listings.md` from `draft` to `implemented` after implementation and verification.
-- Update `specs/README.md` status for `Pinned Listings`.
-- Update `features-to-be-implemented.MD` to mark `Featured or pinned listings` as `implemented`.
-- Update root `README.md` if user-facing behavior, API fields, or setup notes change.
+- Mark `specs/listing-sort-controls.md` as `implemented` after verification.
+- Update `specs/README.md` status for `Listing Sort Controls`.
+- Update `features-to-be-implemented.MD` to mark `Listing sort controls by newest and price` as `implemented`.
+- Update root `README.md` to document the new optional public API `sort` parameter.
 
 ## Review Agent Step
 
-- Spawn one review agent before implementation completion to inspect backend and frontend changes together.
-- Fold any actionable findings into the final patch before verification.
+- Spawn one review agent during implementation to inspect backend and frontend changes together.
+- Fold actionable findings into the final patch before verification.
 
 ## Test Plan
 
 Backend:
 
 - Add/update unit tests for:
-  - `pinned` defaults to false when omitted.
-  - admin create/update can set pinned status.
-  - public listings return pinned unsold bikes before unpinned bikes.
-  - pinned ordering works with search and multi-brand filters.
-  - sold pinned bikes are excluded from customer listings.
+  - DTO accepts `newest`, `price_asc`, and `price_desc`.
+  - DTO rejects invalid sort values.
+  - controller forwards brand, search, and sort to CQRS query.
+  - CQRS handler forwards sort to service.
+  - service defaults to pinned-first and newest ordering.
+  - service applies pinned-first plus numeric price ascending.
+  - service applies pinned-first plus numeric price descending.
+  - search and multi-brand filters still combine with sort.
 - Run:
   - `cd backend && npm run build`
   - `cd backend && npm test`
@@ -60,27 +70,27 @@ Frontend:
 - Run:
   - `cd frontend && npm run build`
 - Manual checks:
-  - admin can pin/unpin a listing.
-  - pinned state survives reload.
-  - customer page shows pinned listings first.
-  - pinned indicator is visible and responsive.
-  - sold pinned listings do not appear publicly.
+  - sort control appears in the customer tools row.
+  - changing sort reloads listing results only.
+  - search and brand filters continue to work with selected sort.
+  - pinned/featured listings remain first within the selected sort.
+  - mobile layout stacks cleanly.
 
 Docker:
 
-- If Docker is running, run `docker compose up --build -d` and confirm migrations apply.
+- If Docker is running, run `docker compose up --build -d`.
+- If Docker is unavailable, record the reason.
 
 ## Risks And Mitigations
 
-- Risk: existing listings may fail on migration if the new column has no default.
-  - Mitigation: migration adds `pinned` as non-null with default `false`.
-- Risk: pinned ordering could break current search/category behavior.
-  - Mitigation: apply pinned sorting after filters and cover combined filters with backend tests.
-- Risk: admin edit flow may accidentally reset pinned status.
-  - Mitigation: include pinned in form state/API payload and test preservation behavior.
+- Risk: numeric price sorting could accidentally sort text values lexicographically.
+  - Mitigation: cast numeric price in the TypeORM query ordering.
+- Risk: price sorting could override pinned priority.
+  - Mitigation: keep `bike.pinned DESC` as the first order clause for every sort.
+- Risk: adding another customer control could crowd the tools row.
+  - Mitigation: reuse existing select styling and responsive stacking.
 
 ## Open Decisions
 
-- Use customer label text `Featured` unless you prefer `Pinned`.
-- Allow admins to pin sold listings in admin data, but keep sold listings hidden from customers.
-- No maximum pinned count in the first version.
+- Use `newest`, `price_asc`, and `price_desc` as API values unless you prefer different query names.
+- Keep pinned priority always on for all sort modes.

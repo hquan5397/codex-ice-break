@@ -8,6 +8,6 @@ export class GetPublicBikesHandler implements IQueryHandler<GetPublicBikesQuery,
   constructor(private readonly bikesService: BikesService) {}
 
   execute(query: GetPublicBikesQuery): Promise<Bike[]> {
-    return this.bikesService.findAll(query.brands, query.search);
+    return this.bikesService.findAll(query.brands, query.search, query.sort);
   }
 }

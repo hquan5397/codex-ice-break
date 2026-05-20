@@ -660,6 +660,35 @@ textarea:focus {
   box-shadow: none;
 }
 
+.sort-field {
+  background: #ffffff;
+  border: 1px solid #d6ddd8;
+  border-radius: 6px;
+  gap: 2px;
+  min-height: 42px;
+  min-width: 190px;
+  padding: 6px 10px;
+}
+
+.sort-field span:first-child {
+  color: #66736b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.sort-field .select-control select {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  min-height: 20px;
+  padding: 0 28px 0 0;
+}
+
+.sort-field .select-control svg {
+  right: 0;
+}
+
 .sr-only {
   clip: rect(0, 0, 0, 0);
   border: 0;
@@ -1248,6 +1277,7 @@ textarea:focus {
   .inventory-tools,
   .brand-filter,
   .search-field,
+  .sort-field,
   .brand-filter summary {
     transform: none;
     width: 100%;

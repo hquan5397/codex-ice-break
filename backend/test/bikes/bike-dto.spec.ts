@@ -2,7 +2,7 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { BikeBrand } from '../../src/bikes/bike-brand.enum';
 import { CreateBikeDto, UpdateBikeDto } from '../../src/bikes/commands';
-import { GetPublicBikesDto } from '../../src/bikes/queries';
+import { GetPublicBikesDto, ListingSort } from '../../src/bikes/queries';
 
 describe('Bike DTO validation', () => {
   it('rejects whitespace-only create titles and empty create prices', async () => {
@@ -104,6 +104,25 @@ describe('Bike DTO validation', () => {
     const errors = await validate(dto);
 
     expect(errors.map((error) => error.property)).toContain('search');
+  });
+
+  it('accepts supported public listing sort values', async () => {
+    for (const sort of [ListingSort.Newest, ListingSort.PriceAsc, ListingSort.PriceDesc]) {
+      const dto = plainToInstance(GetPublicBikesDto, { sort });
+
+      await expect(validate(dto)).resolves.toHaveLength(0);
+      expect(dto.sort).toBe(sort);
+    }
+  });
+
+  it('rejects unsupported public listing sort values', async () => {
+    const dto = plainToInstance(GetPublicBikesDto, {
+      sort: 'oldest',
+    });
+
+    const errors = await validate(dto);
+
+    expect(errors.map((error) => error.property)).toContain('sort');
   });
 
   it('rejects whitespace-only update titles', async () => {
