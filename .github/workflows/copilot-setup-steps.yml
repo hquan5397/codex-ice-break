@@ -20,6 +20,9 @@ jobs:
       - name: Install Copilot CLI
         run: npm install -g @githubnext/github-copilot-cli
 
+      - name: Add npm global bin to PATH
+        run: echo "$(npm bin -g)" >> $GITHUB_PATH
+        
       - name: Print Copilot CLI version
         run: copilot --version
 
