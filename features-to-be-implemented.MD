@@ -6,7 +6,7 @@ This file tracks high-value product features and whether they have been implemen
 | --- | --- |
 | Listing contact actions: Call, Zalo, and social contact buttons on listing cards/detail page | not-implemented |
 | Admin delete or archive listing | not-implemented |
-| Customer image gallery improvements with larger preview/fullscreen viewing | not-implemented |
+| Customer image gallery improvements with larger preview/fullscreen viewing | implemented |
 | Featured or pinned listings | implemented |
 | Listing sort controls by newest and price | implemented |
 | Public store info section with business hours and Google Maps link | not-implemented |
