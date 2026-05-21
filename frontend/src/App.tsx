@@ -3,12 +3,15 @@ import {
   Activity,
   ArrowLeft,
   Camera,
+  ChevronLeft,
+  ChevronRight,
   Download,
   Gauge,
   Loader2,
   Lock,
   LogOut,
   MapPin,
+  Maximize2,
   Pencil,
   Phone,
   Plus,
@@ -431,10 +434,117 @@ function BikeDetailPage({ id }: { id: string }) {
   const { bike, error, isLoading } = useBike(id);
   const detailImages = bike ? getBikeImages(bike) : [];
   const [selectedImage, setSelectedImage] = useState('');
+  const [failedImages, setFailedImages] = useState<Set<string>>(() => new Set());
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const previewDialogRef = useRef<HTMLDivElement | null>(null);
+  const previewOpenerRef = useRef<HTMLElement | null>(null);
+  const selectedImageIndex = Math.max(0, detailImages.indexOf(selectedImage));
+  const activePreviewImage = detailImages[previewIndex] || selectedImage || detailImages[0] || '';
+  const hasMultipleImages = detailImages.length > 1;
 
   useEffect(() => {
     setSelectedImage(detailImages[0] || '');
+    setPreviewIndex(0);
+    setFailedImages(new Set());
+    setIsPreviewOpen(false);
   }, [bike?.id]);
+
+  useEffect(() => {
+    if (!isPreviewOpen) {
+      return undefined;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.setTimeout(() => previewDialogRef.current?.focus(), 0);
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closePreview();
+        return;
+      }
+
+      if (event.key === 'ArrowLeft' && hasMultipleImages) {
+        event.preventDefault();
+        showPreviousPreviewImage();
+        return;
+      }
+
+      if (event.key === 'ArrowRight' && hasMultipleImages) {
+        event.preventDefault();
+        showNextPreviewImage();
+        return;
+      }
+
+      if (event.key !== 'Tab' || !previewDialogRef.current) {
+        return;
+      }
+
+      const focusableElements = previewDialogRef.current.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (!firstElement || !lastElement) {
+        return;
+      }
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [hasMultipleImages, isPreviewOpen, previewIndex]);
+
+  function markImageFailed(imageUrl: string) {
+    setFailedImages((currentFailedImages) => new Set(currentFailedImages).add(imageUrl));
+  }
+
+  function openPreview(index: number, opener: HTMLElement) {
+    if (!detailImages.length) {
+      return;
+    }
+
+    const nextIndex = Math.min(Math.max(index, 0), detailImages.length - 1);
+    previewOpenerRef.current = opener;
+    setPreviewIndex(nextIndex);
+    setSelectedImage(detailImages[nextIndex]);
+    setIsPreviewOpen(true);
+  }
+
+  function closePreview() {
+    setIsPreviewOpen(false);
+    window.setTimeout(() => previewOpenerRef.current?.focus(), 0);
+  }
+
+  function showPreviousPreviewImage() {
+    setPreviewIndex((currentIndex) => {
+      const nextIndex = (currentIndex - 1 + detailImages.length) % detailImages.length;
+      setSelectedImage(detailImages[nextIndex] || '');
+      return nextIndex;
+    });
+  }
+
+  function showNextPreviewImage() {
+    setPreviewIndex((currentIndex) => {
+      const nextIndex = (currentIndex + 1) % detailImages.length;
+      setSelectedImage(detailImages[nextIndex] || '');
+      return nextIndex;
+    });
+  }
 
   return (
     <main className="detail-page">
@@ -480,17 +590,48 @@ function BikeDetailPage({ id }: { id: string }) {
         ) : (
           <article className="detail-layout">
             <div className="detail-media">
-              <img src={selectedImage || primaryBikeImage(bike)} alt={bike.title} />
+              <button
+                className="detail-main-image"
+                type="button"
+                onClick={(event) => openPreview(selectedImageIndex, event.currentTarget)}
+              >
+                {failedImages.has(selectedImage || primaryBikeImage(bike)) ? (
+                  <span className="image-fallback">
+                    <Camera size={28} />
+                    Image unavailable
+                  </span>
+                ) : (
+                  <img
+                    src={selectedImage || primaryBikeImage(bike)}
+                    alt={bike.title}
+                    onError={() => markImageFailed(selectedImage || primaryBikeImage(bike))}
+                  />
+                )}
+                <span className="preview-hint">
+                  <Maximize2 size={16} />
+                  Preview
+                </span>
+              </button>
               {detailImages.length > 1 && (
                 <div className="detail-thumbnails">
                   {detailImages.map((imageUrl, index) => (
                     <button
                       className={imageUrl === selectedImage ? 'active' : ''}
-                      key={imageUrl}
+                      key={`${imageUrl}-${index}`}
                       type="button"
-                      onClick={() => setSelectedImage(imageUrl)}
+                      onClick={(event) => {
+                        setSelectedImage(imageUrl);
+                        openPreview(index, event.currentTarget);
+                      }}
+                      aria-label={`Select ${bike.title} image ${index + 1}`}
                     >
-                      <img src={imageUrl} alt={`${bike.title} image ${index + 1}`} />
+                      {failedImages.has(imageUrl) ? (
+                        <span className="thumbnail-fallback">
+                          <Camera size={18} />
+                        </span>
+                      ) : (
+                        <img src={imageUrl} alt={`${bike.title} image ${index + 1}`} onError={() => markImageFailed(imageUrl)} />
+                      )}
                     </button>
                   ))}
                 </div>
@@ -563,6 +704,72 @@ function BikeDetailPage({ id }: { id: string }) {
                 </button>
               </div>
             </div>
+
+            {isPreviewOpen && (
+              <div
+                className="image-preview-backdrop"
+                role="presentation"
+                onMouseDown={(event) => {
+                  if (event.target === event.currentTarget) {
+                    closePreview();
+                  }
+                }}
+              >
+                <div
+                  aria-label={`${bike.title} image preview`}
+                  aria-modal="true"
+                  className="image-preview-dialog"
+                  ref={previewDialogRef}
+                  role="dialog"
+                  tabIndex={-1}
+                >
+                  <button className="image-preview-close" type="button" onClick={closePreview} aria-label="Close image preview">
+                    <X size={24} />
+                  </button>
+
+                  {hasMultipleImages && (
+                    <button
+                      className="image-preview-nav previous"
+                      type="button"
+                      onClick={showPreviousPreviewImage}
+                      aria-label="Show previous image"
+                    >
+                      <ChevronLeft size={30} />
+                    </button>
+                  )}
+
+                  <div className="image-preview-stage">
+                    {failedImages.has(activePreviewImage) ? (
+                      <div className="image-preview-fallback">
+                        <Camera size={42} />
+                        <span>Image unavailable</span>
+                      </div>
+                    ) : (
+                      <img
+                        src={activePreviewImage}
+                        alt={`${bike.title} image ${previewIndex + 1} of ${detailImages.length}`}
+                        onError={() => markImageFailed(activePreviewImage)}
+                      />
+                    )}
+                  </div>
+
+                  {hasMultipleImages && (
+                    <button
+                      className="image-preview-nav next"
+                      type="button"
+                      onClick={showNextPreviewImage}
+                      aria-label="Show next image"
+                    >
+                      <ChevronRight size={30} />
+                    </button>
+                  )}
+
+                  <span className="image-preview-count">
+                    {previewIndex + 1} / {detailImages.length}
+                  </span>
+                </div>
+              </div>
+            )}
           </article>
         )}
       </section>

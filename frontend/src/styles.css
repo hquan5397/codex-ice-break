@@ -900,10 +900,69 @@ textarea:focus {
   overflow: hidden;
 }
 
+.detail-main-image {
+  background: #eef1eb;
+  border: 0;
+  color: #17211d;
+  cursor: zoom-in;
+  display: block;
+  padding: 0;
+  position: relative;
+  text-align: left;
+  width: 100%;
+}
+
 .detail-media img {
   aspect-ratio: 4 / 3;
   display: block;
   object-fit: cover;
+  width: 100%;
+}
+
+.detail-main-image img {
+  transition: transform 160ms ease;
+}
+
+.detail-main-image:hover img,
+.detail-main-image:focus-visible img {
+  transform: scale(1.015);
+}
+
+.detail-main-image:focus-visible {
+  outline: 3px solid #1f7a55;
+  outline-offset: -3px;
+}
+
+.preview-hint {
+  align-items: center;
+  background: rgba(16, 22, 20, 0.82);
+  border-radius: 999px;
+  bottom: 14px;
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 0.85rem;
+  font-weight: 800;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 12px;
+  position: absolute;
+  right: 14px;
+}
+
+.image-fallback,
+.thumbnail-fallback {
+  align-items: center;
+  color: #5f6c65;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.image-fallback {
+  aspect-ratio: 4 / 3;
+  background: #eef1eb;
+  flex-direction: column;
+  font-weight: 800;
   width: 100%;
 }
 
@@ -927,8 +986,129 @@ textarea:focus {
   border-color: #1f7a55;
 }
 
+.detail-thumbnails button:focus-visible {
+  outline: 3px solid #1f7a55;
+  outline-offset: 2px;
+}
+
 .detail-thumbnails img {
   aspect-ratio: 4 / 3;
+}
+
+.thumbnail-fallback {
+  aspect-ratio: 4 / 3;
+  background: #eef1eb;
+  width: 100%;
+}
+
+.image-preview-backdrop {
+  align-items: center;
+  background: rgba(8, 12, 11, 0.9);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 24px;
+  position: fixed;
+  z-index: 80;
+}
+
+.image-preview-dialog {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: min(760px, calc(100vh - 48px));
+  outline: none;
+  position: relative;
+  width: min(1120px, calc(100vw - 48px));
+}
+
+.image-preview-stage {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  max-height: calc(100vh - 120px);
+  width: 100%;
+}
+
+.image-preview-stage img {
+  border-radius: 8px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.38);
+  display: block;
+  max-height: calc(100vh - 120px);
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.image-preview-fallback {
+  align-items: center;
+  background: #eef1eb;
+  border-radius: 8px;
+  color: #44504a;
+  display: flex;
+  flex-direction: column;
+  font-weight: 800;
+  gap: 10px;
+  min-height: min(520px, calc(100vh - 160px));
+  width: min(760px, 100%);
+}
+
+.image-preview-close,
+.image-preview-nav {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  color: #101614;
+  cursor: pointer;
+  display: inline-flex;
+  height: 46px;
+  justify-content: center;
+  padding: 0;
+  position: absolute;
+  width: 46px;
+  z-index: 2;
+}
+
+.image-preview-close:hover,
+.image-preview-nav:hover,
+.image-preview-close:focus-visible,
+.image-preview-nav:focus-visible {
+  background: #ffffff;
+  outline: 3px solid #83c9a9;
+  outline-offset: 2px;
+}
+
+.image-preview-close {
+  right: 0;
+  top: 0;
+}
+
+.image-preview-nav {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.image-preview-nav.previous {
+  left: 0;
+}
+
+.image-preview-nav.next {
+  right: 0;
+}
+
+.image-preview-count {
+  background: rgba(16, 22, 20, 0.82);
+  border-radius: 999px;
+  bottom: 0;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 800;
+  left: 50%;
+  min-width: 58px;
+  padding: 8px 12px;
+  position: absolute;
+  text-align: center;
+  transform: translateX(-50%);
 }
 
 .detail-content,
@@ -1251,6 +1431,34 @@ textarea:focus {
   .detail-layout {
     grid-template-columns: 1fr;
   }
+
+  .image-preview-backdrop {
+    padding: 14px;
+  }
+
+  .image-preview-dialog {
+    min-height: calc(100vh - 28px);
+    width: calc(100vw - 28px);
+  }
+
+  .image-preview-stage,
+  .image-preview-stage img {
+    max-height: calc(100vh - 110px);
+  }
+
+  .image-preview-close,
+  .image-preview-nav {
+    height: 42px;
+    width: 42px;
+  }
+
+  .image-preview-nav.previous {
+    left: 8px;
+  }
+
+  .image-preview-nav.next {
+    right: 8px;
+  }
 }
 
 @media (max-width: 520px) {
@@ -1310,6 +1518,21 @@ textarea:focus {
 
   .detail-facts {
     grid-template-columns: 1fr;
+  }
+
+  .preview-hint {
+    bottom: 10px;
+    font-size: 0;
+    gap: 0;
+    min-height: 38px;
+    padding: 0;
+    right: 10px;
+    width: 38px;
+  }
+
+  .image-preview-stage,
+  .image-preview-stage img {
+    max-height: calc(100vh - 96px);
   }
 
   .summary-stat-grid {
