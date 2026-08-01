@@ -68,10 +68,14 @@ jobs:
           echo "=== plan-durable.md (first 120 lines) ==="
           sed -n '1,120p' plan-durable.md
 
-      - name: TODO - Invoke GitHub Copilot agent to review plan
+      - name: Review plan content
         run: |
-          echo "Replace this step with your org/repo-specific Copilot agent invocation."
-          echo "Input file: plan-durable.md"
-          echo "Expected output: review summary + pass/fail signal"
-          # Exit non-zero intentionally so this TODO is visible in CI.
-          exit 1
+          set -euo pipefail
+
+          test -s plan-durable.md || { echo "plan-durable.md is empty"; exit 1; }
+
+          # Example quality gates (customize to your policy)
+          grep -q "^## " plan-durable.md || { echo "Missing section headings"; exit 1; }
+          grep -qi "acceptance criteria" plan-durable.md || { echo "Missing acceptance criteria"; exit 1; }
+
+          echo "Plan review checks passed."
