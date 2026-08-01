@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity,
   ArrowLeft,
@@ -60,9 +60,7 @@ type EditListingForm = ListingForm & {
   sold: boolean;
 };
 
-type ContractForm = ContractData;
-
-function emptyContractForm(): ContractForm {
+function emptyContractForm(): ContractData {
   return {
     buyerName: '',
     buyerPhone: '',
@@ -71,7 +69,7 @@ function emptyContractForm(): ContractForm {
     frameNumber: '',
     engineNumber: '',
     paymentMethod: 'Cash',
-    contractDate: new Date().toISOString().slice(0, 10),
+    contractDate: new Date().toLocaleDateString('en-CA'),
   };
 }
 
@@ -311,7 +309,7 @@ function cleanupImagePreviews(images: ImageFormItem[]) {
 }
 
 function ContractOverlay({ bike, onClose }: { bike: Bike; onClose: () => void }) {
-  const [form, setForm] = useState<ContractForm>(emptyContractForm);
+  const [form, setForm] = useState<ContractData>(emptyContractForm);
   const [isExporting, setIsExporting] = useState(false);
   const overlayRef = useRef<HTMLDivElement | null>(null);
 
@@ -323,7 +321,9 @@ function ContractOverlay({ bike, onClose }: { bike: Bike; onClose: () => void })
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         event.preventDefault();
-        onClose();
+        if (!isExporting) {
+          onClose();
+        }
         return;
       }
 
@@ -332,7 +332,7 @@ function ContractOverlay({ bike, onClose }: { bike: Bike; onClose: () => void })
       }
 
       const focusable = overlayRef.current.querySelectorAll<HTMLElement>(
-        'button, input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
       );
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
@@ -356,9 +356,9 @@ function ContractOverlay({ bike, onClose }: { bike: Bike; onClose: () => void })
       document.body.style.overflow = previousOverflow;
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [onClose]);
+  }, [onClose, isExporting]);
 
-  function updateField(field: keyof ContractForm, value: string) {
+  function updateField(field: keyof ContractData, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
   }
 
@@ -389,7 +389,7 @@ function ContractOverlay({ bike, onClose }: { bike: Bike; onClose: () => void })
           <FileText size={18} />
           Sale contract — {bike.title}
         </span>
-        <button className="icon-button" type="button" onClick={onClose} aria-label="Close contract overlay">
+        <button className="icon-button" type="button" onClick={onClose} aria-label="Close contract overlay" disabled={isExporting}>
           <X size={20} />
         </button>
       </div>
@@ -405,7 +405,7 @@ function ContractOverlay({ bike, onClose }: { bike: Bike; onClose: () => void })
 
           <label>
             Buyer phone
-            <input value={form.buyerPhone} onChange={(event) => updateField('buyerPhone', event.target.value)} placeholder="0901 234 567" />
+            <input type="tel" value={form.buyerPhone} onChange={(event) => updateField('buyerPhone', event.target.value)} placeholder="0901 234 567" />
           </label>
 
           <label>
@@ -498,6 +498,7 @@ function ContractOverlay({ bike, onClose }: { bike: Bike; onClose: () => void })
                 <p>{[bike.brand, bike.model, bike.year].filter(Boolean).join(' / ')}</p>
               )}
               {bike.mileage !== undefined && bike.mileage !== null && <p>Mileage: {bike.mileage.toLocaleString()} km</p>}
+              {bike.description && <p>{bike.description}</p>}
               <p>Frame No.: {form.frameNumber || <span className="contract-blank">________________</span>}</p>
               <p>Engine No.: {form.engineNumber || <span className="contract-blank">________________</span>}</p>
             </div>
@@ -505,7 +506,7 @@ function ContractOverlay({ bike, onClose }: { bike: Bike; onClose: () => void })
             <div className="contract-section">
               <h2>SALE PRICE</h2>
               <p className="contract-price">{formatBikePrice(bike.price)}</p>
-              <p>Payment method: {form.paymentMethod}</p>
+              <p>Payment method: {form.paymentMethod || 'Cash'}</p>
             </div>
 
             <div className="contract-section">
@@ -546,7 +547,7 @@ function ContractOverlay({ bike, onClose }: { bike: Bike; onClose: () => void })
           {isExporting ? <Loader2 className="spin" size={18} /> : <Download size={18} />}
           Export PDF
         </button>
-        <button className="secondary-button" type="button" onClick={onClose}>
+        <button className="secondary-button" type="button" onClick={onClose} disabled={isExporting}>
           <X size={18} />
           Close
         </button>
@@ -1687,10 +1688,10 @@ function AdminPage({
     setContractBike(bike);
   }
 
-  function handleCloseContract() {
+  const handleCloseContract = useCallback(() => {
     setContractBike(null);
     window.setTimeout(() => contractOpenerRef.current?.focus(), 0);
-  }
+  }, []);
 
   return (
     <main className="app-shell">

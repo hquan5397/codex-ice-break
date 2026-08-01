@@ -326,6 +326,12 @@ export async function downloadContractPdf(bike: Bike, contract: ContractData, st
     y = writeLine(pdf, `Mileage: ${bike.mileage.toLocaleString()} km`, y);
   }
 
+  if (bike.description) {
+    y += 2;
+    y = writeWrappedText(pdf, bike.description, y, 174);
+    y += 2;
+  }
+
   y = writeLine(pdf, `Frame No.: ${contract.frameNumber || '___________________________'}`, y);
   y = writeLine(pdf, `Engine No.: ${contract.engineNumber || '___________________________'}`, y);
   y += 6;
