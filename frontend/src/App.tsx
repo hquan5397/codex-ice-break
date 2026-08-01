@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity,
   ArrowLeft,
@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  FileText,
   Gauge,
   Loader2,
   Lock,
@@ -41,7 +42,7 @@ import {
   updateBikeSold,
   bikeBrands,
 } from './api';
-import { downloadBikePdf } from './pdf';
+import { downloadBikePdf, downloadContractPdf, ContractData } from './pdf';
 
 type ListingForm = {
   title: string;
@@ -58,6 +59,19 @@ type ListingForm = {
 type EditListingForm = ListingForm & {
   sold: boolean;
 };
+
+function emptyContractForm(): ContractData {
+  return {
+    buyerName: '',
+    buyerPhone: '',
+    buyerId: '',
+    buyerAddress: '',
+    frameNumber: '',
+    engineNumber: '',
+    paymentMethod: 'Cash',
+    contractDate: new Date().toLocaleDateString('en-CA'),
+  };
+}
 
 type ImageFormItem = {
   id: string;
@@ -294,11 +308,260 @@ function cleanupImagePreviews(images: ImageFormItem[]) {
   });
 }
 
+function ContractOverlay({ bike, onClose }: { bike: Bike; onClose: () => void }) {
+  const [form, setForm] = useState<ContractData>(emptyContractForm);
+  const [isExporting, setIsExporting] = useState(false);
+  const overlayRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.setTimeout(() => overlayRef.current?.focus(), 0);
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        if (!isExporting) {
+          onClose();
+        }
+        return;
+      }
+
+      if (event.key !== 'Tab' || !overlayRef.current) {
+        return;
+      }
+
+      const focusable = overlayRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (!first || !last) {
+        return;
+      }
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose, isExporting]);
+
+  function updateField(field: keyof ContractData, value: string) {
+    setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  async function handleExport() {
+    setIsExporting(true);
+    try {
+      await downloadContractPdf(bike, form, store);
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
+  const displayDate = form.contractDate
+    ? new Date(`${form.contractDate}T00:00:00`).toLocaleDateString()
+    : new Date().toLocaleDateString();
+
+  return (
+    <div
+      aria-label={`Sale contract for ${bike.title}`}
+      aria-modal="true"
+      className="contract-overlay"
+      ref={overlayRef}
+      role="dialog"
+      tabIndex={-1}
+    >
+      <div className="contract-overlay-header">
+        <span className="contract-overlay-title">
+          <FileText size={18} />
+          Sale contract — {bike.title}
+        </span>
+        <button className="icon-button" type="button" onClick={onClose} aria-label="Close contract overlay" disabled={isExporting}>
+          <X size={20} />
+        </button>
+      </div>
+
+      <div className="contract-overlay-body">
+        <section className="contract-form-panel">
+          <h2 className="contract-form-heading">Buyer details</h2>
+
+          <label>
+            Buyer name
+            <input value={form.buyerName} onChange={(event) => updateField('buyerName', event.target.value)} placeholder="Full name" />
+          </label>
+
+          <label>
+            Buyer phone
+            <input type="tel" value={form.buyerPhone} onChange={(event) => updateField('buyerPhone', event.target.value)} placeholder="0901 234 567" />
+          </label>
+
+          <label>
+            ID / Passport number
+            <input value={form.buyerId} onChange={(event) => updateField('buyerId', event.target.value)} placeholder="ID or passport number" />
+          </label>
+
+          <label>
+            Buyer address
+            <input
+              value={form.buyerAddress}
+              onChange={(event) => updateField('buyerAddress', event.target.value)}
+              placeholder="Street, district, city"
+            />
+          </label>
+
+          <h2 className="contract-form-heading">Vehicle details</h2>
+
+          <label>
+            Frame number
+            <input
+              value={form.frameNumber}
+              onChange={(event) => updateField('frameNumber', event.target.value)}
+              placeholder="Chassis / VIN number"
+            />
+          </label>
+
+          <label>
+            Engine number
+            <input
+              value={form.engineNumber}
+              onChange={(event) => updateField('engineNumber', event.target.value)}
+              placeholder="Engine serial number"
+            />
+          </label>
+
+          <h2 className="contract-form-heading">Transaction</h2>
+
+          <label>
+            Payment method
+            <input
+              value={form.paymentMethod}
+              onChange={(event) => updateField('paymentMethod', event.target.value)}
+              placeholder="Cash"
+            />
+          </label>
+
+          <label>
+            Contract date
+            <input type="date" value={form.contractDate} onChange={(event) => updateField('contractDate', event.target.value)} />
+          </label>
+        </section>
+
+        <section className="contract-preview-panel" aria-label="Contract preview">
+          <div className="contract-preview-doc">
+            <div className="contract-store-header">
+              <strong>{store.name}</strong>
+              <span>
+                Phone: {store.phone} &nbsp;|&nbsp; Address: {store.address}
+              </span>
+            </div>
+
+            <div className="contract-title-block">
+              <h1>VEHICLE SALE CONTRACT</h1>
+              <p>Hop Dong Mua Ban Xe May</p>
+              <p className="contract-date-line">Date: {displayDate}</p>
+            </div>
+
+            <div className="contract-section">
+              <h2>SELLER</h2>
+              <p>{store.name}</p>
+              <p>Phone: {store.phone}</p>
+              <p>Address: {store.address}</p>
+            </div>
+
+            <div className="contract-section">
+              <h2>BUYER</h2>
+              <p>Name: {form.buyerName || <span className="contract-blank">________________</span>}</p>
+              <p>Phone: {form.buyerPhone || <span className="contract-blank">________________</span>}</p>
+              <p>ID / Passport: {form.buyerId || <span className="contract-blank">________________</span>}</p>
+              <p>Address: {form.buyerAddress || <span className="contract-blank">________________</span>}</p>
+            </div>
+
+            <div className="contract-section">
+              <h2>VEHICLE DETAILS</h2>
+              <p>
+                <strong>{bike.title}</strong>
+              </p>
+              {(bike.brand || bike.model || bike.year) && (
+                <p>{[bike.brand, bike.model, bike.year].filter(Boolean).join(' / ')}</p>
+              )}
+              {bike.mileage !== undefined && bike.mileage !== null && <p>Mileage: {bike.mileage.toLocaleString()} km</p>}
+              {bike.description && <p>{bike.description}</p>}
+              <p>Frame No.: {form.frameNumber || <span className="contract-blank">________________</span>}</p>
+              <p>Engine No.: {form.engineNumber || <span className="contract-blank">________________</span>}</p>
+            </div>
+
+            <div className="contract-section">
+              <h2>SALE PRICE</h2>
+              <p className="contract-price">{formatBikePrice(bike.price)}</p>
+              <p>Payment method: {form.paymentMethod || 'Cash'}</p>
+            </div>
+
+            <div className="contract-section">
+              <h2>TERMS</h2>
+              <p className="contract-terms">
+                The seller agrees to transfer full ownership of the above vehicle to the buyer upon receipt of full payment. The buyer accepts
+                the vehicle in its current condition.
+              </p>
+            </div>
+
+            <div className="contract-signatures">
+              <div>
+                <p>
+                  <strong>Seller Signature</strong>
+                </p>
+                <p>{store.name}</p>
+                <div className="contract-signature-line" />
+              </div>
+              <div>
+                <p>
+                  <strong>Buyer Signature</strong>
+                </p>
+                <p>{form.buyerName || <span className="contract-blank">________________</span>}</p>
+                <div className="contract-signature-line" />
+              </div>
+            </div>
+
+            <div className="contract-doc-footer">
+              <span>Generated: {new Date().toLocaleDateString()}</span>
+              <span>{store.name}</span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div className="contract-overlay-actions">
+        <button className="primary-button" type="button" onClick={() => void handleExport()} disabled={isExporting}>
+          {isExporting ? <Loader2 className="spin" size={18} /> : <Download size={18} />}
+          Export PDF
+        </button>
+        <button className="secondary-button" type="button" onClick={onClose} disabled={isExporting}>
+          <X size={18} />
+          Close
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function BikeCard({
   bike,
   isEditing = false,
   isUpdatingStatus = false,
   isUpdatingPinned = false,
+  onContract,
   onEdit,
   onTogglePinned,
   onToggleSold,
@@ -308,6 +571,7 @@ function BikeCard({
   isEditing?: boolean;
   isUpdatingStatus?: boolean;
   isUpdatingPinned?: boolean;
+  onContract?: (bike: Bike, opener: HTMLButtonElement) => void;
   onEdit?: (bike: Bike) => void;
   onTogglePinned?: (bike: Bike) => void;
   onToggleSold?: (bike: Bike) => void;
@@ -367,6 +631,16 @@ function BikeCard({
               <button className="status-button" type="button" onClick={() => onTogglePinned(bike)} disabled={isUpdatingPinned}>
                 {isUpdatingPinned ? <Loader2 className="spin" size={16} /> : <Star size={16} />}
                 {bike.pinned ? 'Unpin' : 'Pin'}
+              </button>
+            )}
+            {onContract && (
+              <button
+                className="status-button"
+                type="button"
+                onClick={(event) => onContract(bike, event.currentTarget)}
+              >
+                <FileText size={16} />
+                Contract
               </button>
             )}
           </div>
@@ -1159,6 +1433,8 @@ function AdminPage({
   const [isDashboardLoading, setIsDashboardLoading] = useState(true);
   const [dashboardDateFrom, setDashboardDateFrom] = useState('');
   const [dashboardDateTo, setDashboardDateTo] = useState('');
+  const [contractBike, setContractBike] = useState<Bike | null>(null);
+  const contractOpenerRef = useRef<HTMLButtonElement | null>(null);
   const imageItemsRef = useRef<ImageFormItem[]>([]);
   const editingBike = bikes.find((bike) => bike.id === editingBikeId);
   const isEditing = Boolean(editingBike);
@@ -1407,8 +1683,19 @@ function AdminPage({
     }
   }
 
+  function handleOpenContract(bike: Bike, opener: HTMLButtonElement) {
+    contractOpenerRef.current = opener;
+    setContractBike(bike);
+  }
+
+  const handleCloseContract = useCallback(() => {
+    setContractBike(null);
+    window.setTimeout(() => contractOpenerRef.current?.focus(), 0);
+  }, []);
+
   return (
     <main className="app-shell">
+      {contractBike && <ContractOverlay bike={contractBike} onClose={handleCloseContract} />}
       <section className="toolbar">
         <div>
           <p className="eyebrow">Admin motorbike inventory</p>
@@ -1596,6 +1883,7 @@ function AdminPage({
                   isUpdatingPinned={pinningBikeId === bike.id}
                   isUpdatingStatus={updatingBikeId === bike.id}
                   key={bike.id}
+                  onContract={handleOpenContract}
                   onEdit={startEditing}
                   onTogglePinned={handleTogglePinned}
                   onToggleSold={handleToggleSold}
