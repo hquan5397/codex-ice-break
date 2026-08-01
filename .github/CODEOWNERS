@@ -1,7 +1,4 @@
 # File: CODEOWNERS
 
-/security/ @hquan5397
-/.github/workflows/ @hquan5397
-/infra/ @hquan5397
-
+# Default code owners for the repository
 * @hquan5397 @hquan5397ytb
