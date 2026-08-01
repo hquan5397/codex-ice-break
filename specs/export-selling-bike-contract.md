@@ -1,6 +1,6 @@
 # Export Selling Bike Contract
 
-Status: draft
+Status: implemented
 Created: 2026-08-01 06:38
 
 ## Goal

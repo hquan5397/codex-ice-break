@@ -49,7 +49,7 @@ Feature specs are ordered by creation date.
 | 16 | 2026-05-20 22:08 | [Pinned Listings](pinned-listings.md) | implemented |
 | 17 | 2026-05-20 22:49 | [Listing Sort Controls](listing-sort-controls.md) | implemented |
 | 18 | 2026-05-21 22:07 | [Images Preview](images-preview.md) | implemented |
-| 19 | 2026-08-01 06:38 | [Export Selling Bike Contract](export-selling-bike-contract.md) | draft |
+| 19 | 2026-08-01 06:38 | [Export Selling Bike Contract](export-selling-bike-contract.md) | implemented |
 
 ## Spec Status
 
