@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: ["main"]
 
+permissions:
+  contents: read
+
 jobs:
   test:
     # Defensive gating: only run if this is actually a PR context
