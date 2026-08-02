@@ -129,6 +129,19 @@ npm test
 - Risk: duplicate image URLs produce unstable thumbnail keys.
   - Mitigation: use image URL plus index for repeated gallery keys where needed.
 
+## Acceptance Criteria
+
+- Clicking the main detail image opens the larger preview viewer.
+- The viewer displays the correct active image.
+- Previous and next controls navigate between images; they are hidden for single-image listings.
+- Escape key, close button, and backdrop click all close the viewer.
+- Left and right arrow keys navigate images while the viewer is open.
+- Focus is trapped inside the viewer while open and restored to the opener element after close.
+- Page scrolling is prevented while the viewer is open.
+- Broken image URLs show a stable fallback with no layout collapse.
+- Mobile layout has no horizontal overflow.
+- `npm run build` in `frontend/` passes with no errors.
+
 ## Open Decisions
 
 - Use a modal-style fullscreen overlay rather than the browser Fullscreen API for predictable mobile and desktop behavior.
