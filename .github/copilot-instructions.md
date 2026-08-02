@@ -1,5 +1,8 @@
 # Project Agent Rules
 
+> **Note:** This file mirrors [`AGENTS.md`](../AGENTS.md), which is the source of truth.
+> When updating either file, apply the same change to the other to keep them in sync.
+
 This is a full-stack motorbike listing app with:
 
 - NestJS + TypeScript backend
