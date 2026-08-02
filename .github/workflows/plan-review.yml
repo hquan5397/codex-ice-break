@@ -76,6 +76,7 @@ jobs:
 
           # Example quality gates (customize to your policy)
           grep -q "^## " plan-durable.md || { echo "Missing section headings"; exit 1; }
-          grep -Eqi "acceptance criteria|success criteria|definition of done" plan-durable.md || { echo "Missing acceptance criteria section"; exit 1; }
+          # Accept common Markdown heading variants (Acceptance Criteria, Done Criteria, etc.) without dropping the gate.
+          grep -Eqi '^[[:space:]]*#{1,6}[[:space:]]+(acceptance criteri(a|on)|success criteria|definition of done|done criteria)([[:space:][:punct:]]|$)' plan-durable.md || { echo "Missing acceptance criteria section"; exit 1; }
 
           echo "Plan review checks passed."
