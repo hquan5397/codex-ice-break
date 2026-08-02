@@ -76,6 +76,6 @@ jobs:
 
           # Example quality gates (customize to your policy)
           grep -q "^## " plan-durable.md || { echo "Missing section headings"; exit 1; }
-          grep -qi "acceptance criteria" plan-durable.md || { echo "Missing acceptance criteria"; exit 1; }
+          grep -Eqi "acceptance criteria|success criteria|definition of done" plan-durable.md || { echo "Missing acceptance criteria section"; exit 1; }
 
           echo "Plan review checks passed."
