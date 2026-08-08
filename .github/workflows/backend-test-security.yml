@@ -75,9 +75,13 @@ jobs:
         run: npm audit --omit=dev
         continue-on-error: true
       
+      - name: Install Copilot CLI extension
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh extension install github/gh-copilot || true
+
       - name: Run security reviewer
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }} # Requires a PAT with Copilot privileges
         run: |
-          npx @github/copilot-cli \
-          --agent security-reviewer \
-          -p "Review this code for vulnerabilities" \
-          --no-ask-user
+          gh copilot explain "Using @security-reviewer, review the code changes for security vulnerabilities."
