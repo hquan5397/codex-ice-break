@@ -1,82 +1,115 @@
 name: Plan Review
 
 on:
-  workflow_run:
-    workflows: ["Plan Gate"]
-    types: [completed]
+  pull_request:
+    types: [opened]
 
 permissions:
-  actions: read
   contents: read
-  pull-requests: write
+  pull-requests: read
 
 jobs:
   review-plan:
-    # Only run when Plan Gate succeeded and was triggered by a PR event
-    if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'pull_request'
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download durable plan artifact from triggering run
-        uses: actions/github-script@v7
-        env:
-          RUN_ID: ${{ github.event.workflow_run.id }}
+      - name: Checkout PR head
+        uses: actions/checkout@v4
         with:
-          script: |
-            const fs = require('fs');
-            const path = require('path');
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
 
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const run_id = process.env.RUN_ID;
-
-            const artifacts = await github.paginate(
-              github.rest.actions.listWorkflowRunArtifacts,
-              { owner, repo, run_id, per_page: 100 }
-            );
-
-            const artifact = artifacts.find(a => a.name === 'plan-durable');
-            if (!artifact) {
-              core.setFailed('Artifact "plan-durable" not found.');
-              return;
-            }
-
-            const zip = await github.rest.actions.downloadArtifact({
-              owner,
-              repo,
-              artifact_id: artifact.id,
-              archive_format: 'zip'
-            });
-
-            fs.writeFileSync(
-              path.join(process.env.GITHUB_WORKSPACE, 'plan-durable.zip'),
-              Buffer.from(zip.data)
-            );
-
-      - name: Unzip durable plan
+      - name: Verify PLAN.md exists and is non-empty
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y unzip
-          unzip -o plan-durable.zip -d .
-          test -f plan-durable.md || { echo "plan-durable.md not found after unzip"; exit 1; }
-          test -s plan-durable.md || { echo "plan-durable.md is empty"; exit 1; }
-
-      - name: Print plan preview
-        run: |
-          echo "=== plan-durable.md (first 120 lines) ==="
-          sed -n '1,120p' plan-durable.md
+          if [ ! -f "PLAN.md" ]; then
+            echo "ERROR: PLAN.md not found in the repository root."
+            exit 1
+          fi
+          if [ ! -s "PLAN.md" ]; then
+            echo "ERROR: PLAN.md exists but is empty."
+            exit 1
+          fi
+          echo "PLAN.md found and is non-empty."
 
       - name: Review plan content
+        id: review
         run: |
           set -euo pipefail
 
-          test -s plan-durable.md || { echo "plan-durable.md is empty"; exit 1; }
+          PLAN_FILE="PLAN.md"
 
-          # Example quality gates (customize to your policy)
-          grep -q "^## " plan-durable.md || { echo "Missing section headings"; exit 1; }
-          # Accept common Markdown heading variants (Acceptance Criteria, Done Criteria, etc.) without dropping the gate.
-          grep -Eqi '^[[:space:]]*#{1,6}[[:space:]]+(acceptance criteri(a|on)|success criteria|definition of done|done criteria)([[:space:][:punct:]]|$)' plan-durable.md || { echo "Missing acceptance criteria section"; exit 1; }
+          # ── Quality gates ────────────────────────────────────────────────────
+          HAS_HEADINGS=false
+          HAS_ACCEPTANCE=false
+          ISSUES=()
 
-          echo "Plan review checks passed."
+          grep -q "^## " "$PLAN_FILE" && HAS_HEADINGS=true || ISSUES+=("Missing section headings (no '## ' found)")
+
+          grep -Eqi \
+            '^[[:space:]]*#{1,6}[[:space:]]+(acceptance criteri(a|on)|success criteria|definition of done|done criteria)([[:space:][:punct:]]|$)' \
+            "$PLAN_FILE" && HAS_ACCEPTANCE=true || ISSUES+=("Missing acceptance criteria section")
+
+          # ── Collect basic stats ───────────────────────────────────────────────
+          TOTAL_LINES=$(wc -l < "$PLAN_FILE")
+          SECTION_COUNT=$(grep -c "^## " "$PLAN_FILE" || true)
+
+          # ── Build the human-readable report ──────────────────────────────────
+          {
+            echo "## 📋 Plan Review Report"
+            echo ""
+            echo "### Pull Request"
+            echo "- **PR:** #${{ github.event.pull_request.number }} — ${{ github.event.pull_request.title }}"
+            echo "- **Author:** @${{ github.actor }}"
+            echo "- **Branch:** \`${{ github.head_ref }}\` → \`${{ github.base_ref }}\`"
+            echo "- **SHA:** \`${{ github.event.pull_request.head.sha }}\`"
+            echo ""
+            echo "### Plan Statistics"
+            echo "- Total lines in PLAN.md: **${TOTAL_LINES}**"
+            echo "- Top-level sections (\`## \`): **${SECTION_COUNT}**"
+            echo ""
+            echo "### Quality Gate Results"
+
+            if $HAS_HEADINGS; then
+              echo "- ✅ Section headings present"
+            else
+              echo "- ❌ Section headings missing"
+            fi
+
+            if $HAS_ACCEPTANCE; then
+              echo "- ✅ Acceptance criteria section found"
+            else
+              echo "- ❌ Acceptance criteria section missing"
+            fi
+
+            echo ""
+            if [ ${#ISSUES[@]} -eq 0 ]; then
+              echo "### ✅ Overall Result: PASSED"
+              echo ""
+              echo "All plan review checks passed. The plan is ready for human review."
+            else
+              echo "### ❌ Overall Result: FAILED"
+              echo ""
+              echo "The following issues must be resolved before this PR can proceed:"
+              for issue in "${ISSUES[@]}"; do
+                echo "- $issue"
+              done
+            fi
+
+            echo ""
+            echo "---"
+            echo "### PLAN.md Preview (first 120 lines)"
+            echo ""
+            echo '```markdown'
+            sed -n '1,120p' "$PLAN_FILE"
+            echo '```'
+          } | tee /tmp/plan-review-report.md
+
+          # Publish to the workflow summary
+          cat /tmp/plan-review-report.md >> "$GITHUB_STEP_SUMMARY"
+
+          # Fail the job if any quality gate did not pass
+          if [ ${#ISSUES[@]} -gt 0 ]; then
+            echo ""
+            echo "Plan review failed with ${#ISSUES[@]} issue(s). See report above."
+            exit 1
+          fi
