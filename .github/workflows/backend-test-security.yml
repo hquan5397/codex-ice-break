@@ -83,6 +83,20 @@ jobs:
 
       - name: Run security reviewer
         env:
-          GH_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }} # Requires a PAT with Copilot privileges
+          GH_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN  }}
         run: |
-          gh copilot -p "Using @security-reviewer, review the code changes for security vulnerabilities. export to a durable artifact and easy to read summary."
+          # Run agent and save output to a local markdown file
+          gh copilot explain "Using @security-reviewer, review the code changes for security vulnerabilities." > security-report.md
+
+      - name: Upload Agent Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: copilot-security-report   # Name of the artifact
+          path: security-report.md            # File or directory to archive
+          retention-days: 30              # How long to keep it (default 90 days)
+          if-no-files-found: error
+
+      - name: Display report in Job Summary
+        if: always()
+        run: |
+          cat security-report.md >> "$GITHUB_STEP_SUMMARY"
