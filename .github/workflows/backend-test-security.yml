@@ -74,17 +74,10 @@ jobs:
         id: audit
         run: npm audit --omit=dev
         continue-on-error: true
-
-      - name: Write security summary
-        if: always()
-        shell: bash
+      
+      - name: Run security reviewer
         run: |
-          {
-            echo "## Backend Security Scan Results"
-            echo ""
-            if [ "${{ steps.audit.outcome }}" = "success" ]; then
-              echo "✅ \`npm audit --omit=dev\` found **no vulnerabilities**."
-            else
-              echo "⚠️ \`npm audit --omit=dev\` reported vulnerabilities — see step logs above for details."
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
+          npx @github/copilot-cli \
+          --agent security-reviewer \
+          -p "Review this code for vulnerabilities" \
+          --no-ask-user
