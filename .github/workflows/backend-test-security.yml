@@ -85,4 +85,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }} # Requires a PAT with Copilot privileges
         run: |
-          gh copilot -p "Using @security-reviewer, review the code changes for security vulnerabilities."
+          gh copilot -p "Using @security-reviewer, review the code changes for security vulnerabilities. export to a durable artifact and easy to read summary."
