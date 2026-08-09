@@ -42,7 +42,7 @@ jobs:
           GH_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
         run: |
           # Run agent and save output to a local markdown file
-          gh copilot --prompt "Using @security-reviewer, review the code changes for security vulnerabilities." > security-report.md || \
+          gh copilot --prompt "Using @security-reviewer, review the current backend codebase for security vulnerabilities." > security-report.md || \
             echo "Security reviewer execution failed. Check workflow logs for details." > security-report.md
 
       - name: Upload Agent Artifact
