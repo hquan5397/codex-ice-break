@@ -108,8 +108,8 @@ TypeORM `synchronize` is disabled by default. Keep schema changes in `backend/sr
 
 ## CI/CD
 
-`backend-test` runs automatically for pull requests targeting `main` to build and test the backend.
+`Backend Test` runs automatically for pull requests targeting `main` to build and test the backend.
 
-`backend-security-scanning` is manually triggered (`workflow_dispatch`) for backend security checks.
+`Backend Security Scanning` is manually triggered (`workflow_dispatch`) for backend security checks.
 
 The Docker image workflow runs after changes are merged into `main`. It builds backend and frontend Docker images and pushes them to Docker Hub using the configured repository secrets.
