@@ -1,0 +1,49 @@
+name: Backend Test
+
+on:
+  pull_request:
+    branches: ["main"]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+
+      - name: Build backend
+        run: npm run build
+
+      - name: Run backend tests
+        run: npm test
+
+      - name: Write test summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Backend Test Results"
+            echo ""
+            if [ "${{ job.status }}" = "success" ]; then
+              echo "✅ Build and tests **passed**."
+            else
+              echo "❌ Build or tests **failed** — see step logs above for details."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

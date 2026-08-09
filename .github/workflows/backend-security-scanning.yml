@@ -1,57 +1,13 @@
-name: Backend Test And Security
+name: Backend Security Scanning
 
 on:
-  pull_request:
-    branches: ["main"]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  test:
-    # Defensive gating: only run if this is actually a PR context
-    if: github.event_name == 'pull_request'
-
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: backend/package-lock.json
-
-      - name: Install backend dependencies
-        run: npm ci
-
-      - name: Build backend
-        run: npm run build
-
-      - name: Run backend tests
-        run: npm test
-
-      - name: Write test summary
-        if: always()
-        shell: bash
-        run: |
-          {
-            echo "## Backend Test Results"
-            echo ""
-            if [ "${{ job.status }}" = "success" ]; then
-              echo "✅ Build and tests **passed**."
-            else
-              echo "❌ Build or tests **failed** — see step logs above for details."
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
-
   security:
-    needs: test
     runs-on: ubuntu-latest
     environment: copilot
     defaults:
@@ -75,7 +31,7 @@ jobs:
         id: audit
         run: npm audit --omit=dev
         continue-on-error: true
-      
+
       - name: Install Copilot CLI extension
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -92,9 +48,9 @@ jobs:
       - name: Upload Agent Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: copilot-security-report   # Name of the artifact
-          path: backend/security-report.md    # File or directory to archive
-          retention-days: 30              # How long to keep it (default 90 days)
+          name: copilot-security-report
+          path: backend/security-report.md
+          retention-days: 30
           if-no-files-found: error
 
       - name: Display report in Job Summary
