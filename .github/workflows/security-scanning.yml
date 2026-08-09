@@ -1,0 +1,46 @@
+name: Security Scanning
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+
+      - name: Run security audit
+        id: audit
+        run: npm audit --omit=dev
+        continue-on-error: true
+
+      - name: Write security summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Backend Security Scan Results"
+            echo ""
+            if [ "${{ steps.audit.outcome }}" = "success" ]; then
+              echo "✅ \`npm audit --omit=dev\` found **no vulnerabilities**."
+            else
+              echo "⚠️ \`npm audit --omit=dev\` reported vulnerabilities — see step logs above for details."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
