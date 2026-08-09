@@ -53,6 +53,7 @@ jobs:
   security:
     needs: test
     runs-on: ubuntu-latest
+    environment: copilot
     defaults:
       run:
         working-directory: backend
@@ -74,17 +75,29 @@ jobs:
         id: audit
         run: npm audit --omit=dev
         continue-on-error: true
+      
+      - name: Install Copilot CLI extension
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh extension install github/gh-copilot || true
 
-      - name: Write security summary
-        if: always()
-        shell: bash
+      - name: Run security reviewer
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
         run: |
-          {
-            echo "## Backend Security Scan Results"
-            echo ""
-            if [ "${{ steps.audit.outcome }}" = "success" ]; then
-              echo "✅ \`npm audit --omit=dev\` found **no vulnerabilities**."
-            else
-              echo "⚠️ \`npm audit --omit=dev\` reported vulnerabilities — see step logs above for details."
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
+          # Run agent and save output to a local markdown file
+          gh copilot --prompt "Using @security-reviewer, review the code changes for security vulnerabilities." > security-report.md || \
+            echo "Security reviewer execution failed. Check workflow logs for details." > security-report.md
+
+      - name: Upload Agent Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: copilot-security-report   # Name of the artifact
+          path: backend/security-report.md    # File or directory to archive
+          retention-days: 30              # How long to keep it (default 90 days)
+          if-no-files-found: error
+
+      - name: Display report in Job Summary
+        if: always()
+        run: |
+          cat security-report.md >> "$GITHUB_STEP_SUMMARY"
