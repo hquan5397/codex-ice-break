@@ -1,0 +1,60 @@
+name: Backend Security Scanning
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    environment: copilot
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+
+      - name: Run security audit
+        id: audit
+        run: npm audit --omit=dev
+        continue-on-error: true
+
+      - name: Install Copilot CLI extension
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh extension install github/gh-copilot || true
+
+      - name: Run security reviewer
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+        run: |
+          # Run agent and save output to a local markdown file
+          gh copilot --prompt "Using @security-reviewer, review the current backend codebase for security vulnerabilities." > security-report.md || \
+            echo "Security reviewer execution failed. Check workflow logs for details." > security-report.md
+
+      - name: Upload Agent Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: copilot-security-report
+          path: backend/security-report.md
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Display report in Job Summary
+        if: always()
+        run: |
+          cat security-report.md >> "$GITHUB_STEP_SUMMARY"
